@@ -74,9 +74,7 @@ class TableCell(BaseModel):
 class TableData(BaseModel):
     """Структурированное представление таблицы для PostgreSQL."""
 
-    table_id: str = Field(
-        default_factory=lambda: f"tbl_{uuid.uuid4().hex[:8]}"
-    )
+    table_id: str = Field(default_factory=lambda: f"tbl_{uuid.uuid4().hex[:8]}")
     name: Optional[str] = None  # Название таблицы (если есть)
     caption: Optional[str] = None  # Подпись к таблице
     columns: list[str] = Field(default_factory=list)
@@ -88,9 +86,7 @@ class TableData(BaseModel):
 class ImageData(BaseModel):
     """Метаданные изображения."""
 
-    image_id: str = Field(
-        default_factory=lambda: f"img_{uuid.uuid4().hex[:8]}"
-    )
+    image_id: str = Field(default_factory=lambda: f"img_{uuid.uuid4().hex[:8]}")
     mime_type: str = "image/png"
     storage_uri: Optional[str] = None  # s3://bucket/... или file://...
     base64: Optional[str] = None  # Для inline (< 1MB)
@@ -103,9 +99,7 @@ class ImageData(BaseModel):
 class Entity(BaseModel):
     """Сущность для Knowledge Graph."""
 
-    entity_id: str = Field(
-        default_factory=lambda: f"ent_{uuid.uuid4().hex[:8]}"
-    )
+    entity_id: str = Field(default_factory=lambda: f"ent_{uuid.uuid4().hex[:8]}")
     label: EntityLabel  # Тип: Material, Process, Property...
     name: str  # Нормализованное имя
     surface_form: Optional[str] = None  # Как написано в тексте
@@ -116,9 +110,7 @@ class Entity(BaseModel):
 class Relation(BaseModel):
     """Связь между сущностями."""
 
-    relation_id: str = Field(
-        default_factory=lambda: f"rel_{uuid.uuid4().hex[:8]}"
-    )
+    relation_id: str = Field(default_factory=lambda: f"rel_{uuid.uuid4().hex[:8]}")
     source_id: str
     target_id: str
     relation_type: RelationType
@@ -134,9 +126,7 @@ class UnifiedElement(BaseModel):
     всё приводится к этому формату.
     """
 
-    element_id: str = Field(
-        default_factory=lambda: f"el_{uuid.uuid4().hex[:8]}"
-    )
+    element_id: str = Field(default_factory=lambda: f"el_{uuid.uuid4().hex[:8]}")
     type: ElementType
 
     # Основное содержимое
@@ -241,8 +231,7 @@ class UnifiedDocument(BaseModel):
         return [
             el
             for el in self.elements
-            if el.type
-            in (ElementType.TEXT, ElementType.TITLE, ElementType.LIST_ITEM)
+            if el.type in (ElementType.TEXT, ElementType.TITLE, ElementType.LIST_ITEM)
             and not el.is_structural()
         ]
 
@@ -256,13 +245,9 @@ class Chunk(BaseModel):
     Создаётся на этапе chunking из UnifiedElement.
     """
 
-    chunk_id: str = Field(
-        default_factory=lambda: f"chunk_{uuid.uuid4().hex[:8]}"
-    )
+    chunk_id: str = Field(default_factory=lambda: f"chunk_{uuid.uuid4().hex[:8]}")
     document_id: str
-    element_ids: list[str] = Field(
-        default_factory=list
-    )  # Из каких элементов собран
+    element_ids: list[str] = Field(default_factory=list)  # Из каких элементов собран
 
     text: str  # Текст для эмбеддинга
     embedding: Optional[list[float]] = None
