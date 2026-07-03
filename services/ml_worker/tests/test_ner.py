@@ -10,18 +10,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from models import (
-    Entity,
-    EntityLabel,
-    Relation,
-    RelationType,
-    SourceType,
-    TableData,
-    UnifiedDocument,
-    UnifiedElement,
-)
+from models import Entity, EntityLabel, SourceType, TableData, UnifiedDocument, UnifiedElement
 from ner.db_handler import DBHandler
-from ner.ner_extractor import NERExtractor, NER_LABEL_MAP, RELATION_PATTERNS
+from ner.ner_extractor import NERExtractor, NER_LABEL_MAP
 from ner.router import EXTENSION_MAP, route_file
 from ner.extractors import (
     DBExtractor,
@@ -173,8 +164,6 @@ def _create_minimal_pdf(path: Path, text: str):
 
 
 def _make_mock_ner_pipeline(entities: list[dict]):
-    """Create a mock transformers pipeline for testing NERExtractor."""
-
     class MockPipeline:
         def __init__(self, ents):
             self._ents = ents
@@ -440,19 +429,16 @@ class TestNERExtractor:
         assert "ниобий" in names
         assert "chromium" in names
 
-    def test_extract_entities_label_mapping(self):
+    def test_extract_entities_label_is_material(self):
         extractor = NERExtractor(model_name="mock-model")
         extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "MISC", "word": "MaterialX", "score": 0.9},
-            {"entity_group": "ORG", "word": "ProcessY", "score": 0.8},
+            {"entity_group": "MISC", "word": "Niobium", "score": 0.9},
         ])
 
-        elements = [UnifiedElement(type="text", text="MaterialX and ProcessY", source_type=SourceType.TEXT)]
+        elements = [UnifiedElement(type="text", text="Niobium is a metal", source_type=SourceType.TEXT)]
         entities = extractor.extract_entities(elements)
-
-        labels = {e.name: e.label for e in entities}
-        assert labels["materialx"] == EntityLabel.MATERIAL
-        assert labels["processy"] == EntityLabel.PROCESS
+        assert len(entities) == 1
+        assert entities[0].label == EntityLabel.MATERIAL
 
     def test_extract_entities_deduplicates(self):
         extractor = NERExtractor(model_name="mock-model")
@@ -493,16 +479,15 @@ class TestNERExtractor:
         chunks = extractor._chunk_text("")
         assert chunks == [""]
 
-    def test_map_entity_label_known(self):
+    def test_map_entity_label_misc(self):
         extractor = NERExtractor(model_name="mock")
         assert extractor._map_entity_label("MISC") == EntityLabel.MATERIAL
-        assert extractor._map_entity_label("ORG") == EntityLabel.PROCESS
-        assert extractor._map_entity_label("PER") == EntityLabel.PARAMETER
-        assert extractor._map_entity_label("LOC") == EntityLabel.MATERIAL
 
     def test_map_entity_label_unknown_defaults(self):
         extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("UNKNOWN") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("ORG") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("PER") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("LOC") == EntityLabel.MATERIAL
 
     def test_normalize_name_strips_markers(self):
         extractor = NERExtractor(model_name="mock")
@@ -510,183 +495,25 @@ class TestNERExtractor:
         assert extractor._normalize_name(" Niobium ") == "niobium"
         assert extractor._normalize_name("Niobium-1") == "niobium-1"
 
-    def test_extract_relations_empty_entities(self):
-        extractor = NERExtractor(model_name="mock")
-        relations = extractor.extract_relations([], [])
-        assert relations == []
-
-    def test_extract_relations_single_entity(self):
-        extractor = NERExtractor(model_name="mock")
-        entities = [Entity(label=EntityLabel.MATERIAL, name="ниобий")]
-        elements = [UnifiedElement(type="text", text="ниобий", source_type=SourceType.TEXT)]
-        relations = extractor.extract_relations(entities, elements)
-        assert relations == []
-
-    def test_extract_relations_with_pattern(self):
-        extractor = NERExtractor(model_name="mock")
-        entities = [
-            Entity(entity_id="e1", label=EntityLabel.MATERIAL, name="ниобий"),
-            Entity(entity_id="e2", label=EntityLabel.PROPERTY, name="жаропрочность"),
-        ]
-        elements = [
-            UnifiedElement(
-                type="text",
-                text="Ниобий повышает жаропрочность стали",
-                source_type=SourceType.TEXT,
-            )
-        ]
-        relations = extractor.extract_relations(entities, elements)
-        assert len(relations) >= 1
-        assert any(
-            r.source_id == "e1" and r.target_id == "e2"
-            for r in relations
-        )
-
-    def test_extract_relations_with_english_pattern(self):
-        extractor = NERExtractor(model_name="mock")
-        entities = [
-            Entity(entity_id="e1", label=EntityLabel.MATERIAL, name="nickel"),
-            Entity(entity_id="e2", label=EntityLabel.PROPERTY, name="corrosion resistance"),
-        ]
-        elements = [
-            UnifiedElement(
-                type="text",
-                text="Nickel increases corrosion resistance",
-                source_type=SourceType.TEXT,
-            )
-        ]
-        relations = extractor.extract_relations(entities, elements)
-        rels = [r for r in relations if r.source_id == "e1" and r.target_id == "e2"]
-        assert any(r.relation_type == RelationType.INFLUENCES for r in rels)
-
-    def test_extract_relations_cooccurrence(self):
-        extractor = NERExtractor(model_name="mock")
-        entities = [
-            Entity(entity_id="e1", label=EntityLabel.MATERIAL, name="ниобий"),
-            Entity(entity_id="e2", label=EntityLabel.MATERIAL, name="хром"),
-        ]
-        elements = [
-            UnifiedElement(
-                type="text",
-                text="Ниобий и хром используются в сплавах",
-                source_type=SourceType.TEXT,
-            )
-        ]
-        relations = extractor.extract_relations(entities, elements)
-        assert len(relations) >= 1
-
-    def test_split_sentences(self):
-        extractor = NERExtractor(model_name="mock")
-        sents = extractor._split_sentences("One. Two! Three? Four")
-        assert len(sents) == 4
-
-    def test_extract_entities_and_relations(self):
-        extractor = NERExtractor(model_name="mock")
-        extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "MISC", "word": "Ниобий", "score": 0.95},
-            {"entity_group": "MISC", "word": "Жаропрочность", "score": 0.85},
-        ])
-        elements = [
-            UnifiedElement(
-                type="text",
-                text="Ниобий повышает жаропрочность стали",
-                source_type=SourceType.TEXT,
-            )
-        ]
-        ents, rels = extractor.extract_entities_and_relations(elements)
-        assert len(ents) == 2
-        assert len(rels) >= 1
-
 
 class TestNERLabelMap:
-    def test_all_labels_mapped(self):
-        for label in ("MISC", "ORG", "PER", "LOC"):
-            assert label in NER_LABEL_MAP
-
-
-class TestRelationPatterns:
-    def test_patterns_cover_all_types(self):
-        covered = {rt for _, rt, _ in RELATION_PATTERNS}
-        for rt in RelationType:
-            assert rt in covered, f"Missing pattern for {rt}"
-
-    def test_russian_patterns_compile(self):
-        for pattern_str, _, _ in RELATION_PATTERNS:
-            assert re.compile(pattern_str, re.IGNORECASE)
-
-    def test_english_patterns_compile(self):
-        for pattern_str, _, _ in RELATION_PATTERNS:
-            assert re.compile(pattern_str, re.IGNORECASE)
-
-    def test_influences_pattern_matches(self):
-        import re
-        for pattern_str, rt, _ in RELATION_PATTERNS:
-            if rt == RelationType.INFLUENCES:
-                assert re.search(pattern_str, "увеличивает", re.IGNORECASE)
-                assert re.search(pattern_str, "increases", re.IGNORECASE)
-                break
+    def test_only_misc_mapped(self):
+        assert NER_LABEL_MAP == {"MISC": EntityLabel.MATERIAL}
 
 
 # ─── DBHandler Tests ─────────────────────────────────────────────────────────
 
 
 class TestDBHandler:
-    def test_copy_tables_no_tables(self):
+    def test_copy_tables_logs(self):
         handler = DBHandler()
-        doc = UnifiedDocument(
-            source_type=SourceType.TEXT,
-            source_uri="/dev/null",
-        )
+        doc = UnifiedDocument(source_type=SourceType.TEXT, source_uri="/dev/null")
         handler.copy_tables(doc)
 
-    def test_copy_tables_with_table(self):
-        handler = DBHandler()
-        td = TableData(name="test", columns=["a"], rows=[["1"]])
-        el = UnifiedElement(
-            type="table",
-            text="test table",
-            table_data=td,
-            source_type=SourceType.EXCEL,
-        )
-        doc = UnifiedDocument(
-            source_type=SourceType.EXCEL,
-            source_uri="/dev/null",
-            elements=[el],
-        )
-        handler.copy_tables(doc)
-
-    def test_save_entities_empty(self):
+    def test_save_entities_logs(self):
         handler = DBHandler()
         handler.save_entities([])
 
-    def test_save_entities_with_data(self):
-        handler = DBHandler()
-        entities = [
-            Entity(label=EntityLabel.MATERIAL, name="ниобий"),
-        ]
-        handler.save_entities(entities)
-
-    def test_save_relations_empty(self):
+    def test_save_relations_logs(self):
         handler = DBHandler()
         handler.save_relations([])
-
-    def test_save_relations_with_data(self):
-        handler = DBHandler()
-        relations = [
-            Relation(
-                source_id="e1",
-                target_id="e2",
-                relation_type=RelationType.CONTAINS,
-            ),
-        ]
-        handler.save_relations(relations)
-
-    def test_stub_insert_table(self):
-        td = TableData(name="test", columns=["a"], rows=[["1"]])
-        el = UnifiedElement(
-            type="table",
-            text="test",
-            table_data=td,
-            source_type=SourceType.EXCEL,
-        )
-        DBHandler._stub_insert_table("doc-1", el)

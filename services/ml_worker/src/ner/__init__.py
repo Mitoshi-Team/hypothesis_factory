@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from models import Entity, Relation, UnifiedDocument
+from models import Entity, UnifiedDocument
 from pydantic import BaseModel
 
 from ner.db_handler import DBHandler
@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 class NERResult(BaseModel):
     document: UnifiedDocument
     entities: list[Entity]
-    relations: list[Relation]
 
 
 class NERPipeline:
@@ -54,27 +53,23 @@ class NERPipeline:
         logger.info("Extracting document: %s (type=%s)", file_path, source_type.value)
         return extractor.extract(file_path)
 
-    def extract_entities_and_relations(
-        self,
-        document: UnifiedDocument,
-    ) -> tuple[list[Entity], list[Relation]]:
+    def extract_entities(self, document: UnifiedDocument) -> list[Entity]:
         logger.info(
-            "Extracting entities and relations from document %s",
+            "Extracting entities from document %s",
             document.document_id,
         )
-        return self.ner.extract_entities_and_relations(document.elements)
+        return self.ner.extract_entities(document.elements)
 
     def process(self, file_path: str) -> NERResult:
         document = self.extract_document(file_path)
 
         self.db.copy_tables(document)
 
-        entities, relations = self.extract_entities_and_relations(document)
+        entities = self.extract_entities(document)
 
         self.db.save_entities(entities)
-        self.db.save_relations(relations)
 
-        return NERResult(document=document, entities=entities, relations=relations)
+        return NERResult(document=document, entities=entities)
 
 
 _pipeline: Optional[NERPipeline] = None
@@ -100,8 +95,6 @@ def extract_document(file_path: str) -> UnifiedDocument:
     return get_pipeline().extract_document(file_path)
 
 
-def extract_entities_and_relations(
-    document: UnifiedDocument,
-) -> tuple[list[Entity], list[Relation]]:
-    """Функция 2: из UnifiedDocument получить список Entity и Relation."""
-    return get_pipeline().extract_entities_and_relations(document)
+def extract_entities(document: UnifiedDocument) -> list[Entity]:
+    """Функция 2: из UnifiedDocument получить список Entity."""
+    return get_pipeline().extract_entities(document)
