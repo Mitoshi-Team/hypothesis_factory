@@ -19,6 +19,17 @@ class YandexEmbedder:
             return chunks
 
         texts = [chunk.text for chunk in chunks]
+        all_embeddings = self.embed_texts(texts)
+
+        for chunk, embedding in zip(chunks, all_embeddings):
+            chunk.embedding = embedding
+
+        return chunks
+
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
         all_embeddings: list[list[float]] = []
 
         for i in range(0, len(texts), self.batch_size):
@@ -26,7 +37,4 @@ class YandexEmbedder:
             batch_embeddings = self.client.embed(batch)
             all_embeddings.extend(batch_embeddings)
 
-        for chunk, embedding in zip(chunks, all_embeddings):
-            chunk.embedding = embedding
-
-        return chunks
+        return all_embeddings

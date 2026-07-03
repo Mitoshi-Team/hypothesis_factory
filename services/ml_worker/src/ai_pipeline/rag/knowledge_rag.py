@@ -17,6 +17,7 @@ class KnowledgeRAG:
         chunks = self.store.query_knowledge(
             query_text=query,
             n_results=n_results,
+            where={"type": "chunk"},
         )
 
         context = self._format_context(chunks)

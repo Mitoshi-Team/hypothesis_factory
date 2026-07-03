@@ -27,12 +27,21 @@ class GraphEdge(BaseModel):
     metadata: dict = {}
 
 
+class Chain(BaseModel):
+    chain_id: str = ""
+    node_ids: list[str] = []
+    edge_labels: list[str] = []
+    summary: str = ""
+
+
 class KnowledgeGraph(BaseModel):
     nodes: list[GraphNode] = []
     edges: list[GraphEdge] = []
+    chains: list[Chain] = []
 
     def to_json(self) -> dict:
         return {
             "nodes": [n.model_dump() for n in self.nodes],
             "edges": [e.model_dump() for e in self.edges],
+            "chains": [c.model_dump() for c in self.chains],
         }

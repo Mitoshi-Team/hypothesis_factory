@@ -62,6 +62,7 @@ class ChromaStore:
             embeddings.append(chunk.embedding)
             documents.append(chunk.text)
             meta = dict(chunk.metadata)
+            meta["type"] = "chunk"
             meta["document_id"] = chunk.document_id
             meta["element_ids"] = ",".join(chunk.element_ids)
             metadatas.append(meta)

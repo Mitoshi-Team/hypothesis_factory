@@ -70,6 +70,7 @@ class PipelineInput(BaseModel):
     session_id: Optional[str] = None
     user_id: str = ""
     problem: str = ""
+    file_path: Optional[str] = None
     document: Optional[UnifiedDocument] = None
     constraints: str = ""
     weights: Optional[dict[str, float]] = None
@@ -93,6 +94,7 @@ class PipelineState:
     document: Optional[UnifiedDocument] = None
     chunks: list[Chunk] = field(default_factory=list)
     entities: list[Entity] = field(default_factory=list)
+    ner_entities: list[Entity] = field(default_factory=list)
     relations: list[Relation] = field(default_factory=list)
 
     rag_context: str = ""

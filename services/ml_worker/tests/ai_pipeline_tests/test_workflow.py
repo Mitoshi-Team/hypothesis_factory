@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 from ai_pipeline.state import HypothesisCard, HypothesisReview, PipelineInput
 from ai_pipeline.workflow import HypothesisPipeline
@@ -30,17 +32,30 @@ class TestHypothesisPipeline:
         assert state.history_context == ""
 
     @pytest.mark.asyncio
-    async def test_extract_graph_empty_chunks(self):
+    async def test_ingest_document_no_file_path(self):
         pipeline = HypothesisPipeline()
         state = pipeline_state_factory()
-        state.chunks = []
-        state = await pipeline._extract_graph(state)
-        assert len(state.entities) == 0
+        state = await pipeline._ingest_document(state)
+        assert state.document is None
 
-    def test_link_hypothesis_to_graph_empty(self):
+    @pytest.mark.asyncio
+    async def test_extract_entities_ner_no_document(self):
         pipeline = HypothesisPipeline()
         state = pipeline_state_factory()
-        pipeline._link_hypothesis_to_graph(state)
+        state = await pipeline._extract_entities_ner(state)
+        assert state.ner_entities == []
+
+    @pytest.mark.asyncio
+    async def test_extract_relations_no_entities(self):
+        pipeline = HypothesisPipeline()
+        state = pipeline_state_factory()
+        state = await pipeline._extract_relations(state)
+        assert state.relations == []
+
+    def test_build_graph_no_entities(self):
+        pipeline = HypothesisPipeline()
+        state = pipeline_state_factory()
+        pipeline._build_graph(state)
 
     def test_build_output(self):
         pipeline = HypothesisPipeline()
@@ -67,7 +82,11 @@ class TestHypothesisPipeline:
             pipeline.reviewer, "review", return_value=fake_review
         )
         mocker.patch.object(
-            pipeline.graph_extractor, "extract", return_value=([], [])
+            pipeline.relation_extractor, "extract", return_value=[]
+        )
+        mocker.patch.object(pipeline.relation_rag, "index_relations")
+        mocker.patch.object(
+            pipeline.relation_rag, "retrieve", return_value=([], "")
         )
         mocker.patch.object(
             pipeline.history_rag, "retrieve_similar", return_value=""
@@ -82,34 +101,44 @@ class TestHypothesisPipeline:
         assert output is not None
 
     @pytest.mark.asyncio
-    async def test_pipeline_requires_chunking_on_first_iter(self, mocker):
+    async def test_pipeline_with_file_path_skips_chunking(self, mocker):
         pipeline = HypothesisPipeline()
-        fake_hypothesis = HypothesisCard(
-            title="Test", problem="Test", hypothesis="Some hypothesis"
+        fake_doc = MagicMock()
+        fake_doc.elements = []
+        fake_doc.document_id = "doc_test"
+
+        mocker.patch(
+            "ai_pipeline.workflow.extract_document", return_value=fake_doc
         )
-        fake_review = HypothesisReview(
-            scores={"novelty": 8, "feasibility": 7, "effect": 9, "risk": 3},
-            verdict="accept",
-            comments={"general": "Good work"},
-        )
+        mocker.patch("ai_pipeline.workflow.extract_entities", return_value=[])
         mocker.patch.object(
-            pipeline.generator, "generate", return_value=fake_hypothesis
+            pipeline.relation_extractor, "extract", return_value=[]
         )
+        mocker.patch.object(pipeline.relation_rag, "index_relations")
         mocker.patch.object(
-            pipeline.reviewer, "review", return_value=fake_review
-        )
-        mocker.patch.object(
-            pipeline.graph_extractor, "extract", return_value=([], [])
-        )
-        mocker.patch.object(
-            pipeline.history_rag, "retrieve_similar", return_value=""
+            pipeline.relation_rag, "retrieve", return_value=([], "")
         )
         mocker.patch.object(
             pipeline.knowledge_rag, "retrieve", return_value=([], "")
         )
+        mocker.patch.object(
+            pipeline.history_rag, "retrieve_similar", return_value=""
+        )
         mocker.patch.object(pipeline.history_rag, "store_result")
+        mocker.patch.object(
+            pipeline.generator,
+            "generate",
+            return_value=HypothesisCard(
+                title="T", problem="P", hypothesis="H"
+            ),
+        )
+        mocker.patch.object(
+            pipeline.reviewer,
+            "review",
+            return_value=HypothesisReview(verdict="accept"),
+        )
 
-        input_data = PipelineInput(problem="Test", iteration=0)
+        input_data = PipelineInput(problem="Test", file_path="/fake/path.pdf")
         output = await pipeline.run(input_data)
         assert output is not None
 
@@ -131,7 +160,11 @@ class TestHypothesisPipeline:
             pipeline.reviewer, "review", return_value=fake_review
         )
         mocker.patch.object(
-            pipeline.graph_extractor, "extract", return_value=([], [])
+            pipeline.relation_extractor, "extract", return_value=[]
+        )
+        mocker.patch.object(pipeline.relation_rag, "index_relations")
+        mocker.patch.object(
+            pipeline.relation_rag, "retrieve", return_value=([], "")
         )
         mocker.patch.object(
             pipeline.history_rag, "retrieve_similar", return_value=""
@@ -146,6 +179,33 @@ class TestHypothesisPipeline:
         )
         output = await pipeline.run(input_data)
         assert output is not None
+
+    @pytest.mark.asyncio
+    async def test_retrieve_knowledge_includes_relations(self, mocker):
+        pipeline = HypothesisPipeline()
+        mocker.patch.object(
+            pipeline.knowledge_rag,
+            "retrieve",
+            return_value=(
+                [MagicMock(chunk_id="c1")],
+                "Some chunk context",
+            ),
+        )
+        mocker.patch.object(
+            pipeline.relation_rag,
+            "retrieve",
+            return_value=(
+                [],
+                "Nickel [influences] Strength",
+            ),
+        )
+
+        state = pipeline_state_factory()
+        state.input.problem = "nickel strength"
+        state = await pipeline._retrieve_knowledge(state)
+        assert "Nickel" in state.rag_context
+        assert "influences" in state.rag_context
+        assert "chunk" in state.rag_context
 
 
 def pipeline_state_factory(requires_chunking: bool = False):
