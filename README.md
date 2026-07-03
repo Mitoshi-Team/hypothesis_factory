@@ -1,2 +1,1 @@
-# hypothesis_factory
-НОРНИКЕЛЬ AI
+# Фабрика гипотез
