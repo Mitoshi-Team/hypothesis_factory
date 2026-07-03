@@ -17,6 +17,9 @@ dev = [
     "mdformat>=1.0.0",
     "pre-commit>=4.6.0",
     "ruff>=0.15.20",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-mock>=3.14.0",
 ]
 
 
@@ -40,6 +43,10 @@ select = ["E", "F", "N", "I", "C90", "T", "S"]
 ignore = []
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"services/ml_worker/tests/**" = ["S101", "E501"]
+"src/ai_pipeline/**" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
