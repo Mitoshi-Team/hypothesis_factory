@@ -1,0 +1,1 @@
+ML Pipeline на основе Celery для Hypothesis Factory.

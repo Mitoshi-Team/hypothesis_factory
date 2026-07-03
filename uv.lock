@@ -1,0 +1,25 @@
+version = 1
+revision = 3
+requires-python = "==3.13.*"
+
+[manifest]
+members = [
+    "api-gateway",
+    "hypothesis-factory",
+    "ml-worker",
+]
+
+[[package]]
+name = "api-gateway"
+version = "0.1.0"
+source = { virtual = "services/api_gateway" }
+
+[[package]]
+name = "hypothesis-factory"
+version = "0.1.0"
+source = { virtual = "." }
+
+[[package]]
+name = "ml-worker"
+version = "0.1.0"
+source = { virtual = "services/ml_worker" }
