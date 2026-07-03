@@ -6,9 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "pydantic>=2.13.4",
-    "transformers>=4.30.0",
+    "gliner>=0.2.0",
     "torch>=2.0.0",
-    "sentencepiece>=0.1.99",
     "pandas>=2.0.0",
     "sqlalchemy>=2.0.0",
     "PyPDF2>=3.0.0",

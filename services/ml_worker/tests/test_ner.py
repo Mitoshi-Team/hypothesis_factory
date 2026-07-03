@@ -163,15 +163,15 @@ def _create_minimal_pdf(path: Path, text: str):
     path.write_bytes(body + b"\n" + xref + trailer)
 
 
-def _make_mock_ner_pipeline(entities: list[dict]):
-    class MockPipeline:
+def _make_mock_gliner(entities: list[dict]):
+    class MockGLiNER:
         def __init__(self, ents):
             self._ents = ents
 
-        def __call__(self, text: str, **kwargs):
+        def predict_entities(self, text: str, labels: list[str], threshold: float = 0.5):
             return self._ents
 
-    return MockPipeline(entities)
+    return MockGLiNER(entities)
 
 
 # ─── Router Tests ────────────────────────────────────────────────────────────
@@ -408,11 +408,11 @@ class TestDBExtractor:
 
 
 class TestNERExtractor:
-    def test_extract_entities_with_mocked_pipeline(self):
+    def test_extract_entities_with_mocked_gliner(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "mat_name", "word": "Ниобий", "score": 0.95},
-            {"entity_group": "mat_name", "word": "Chromium", "score": 0.87},
+        extractor._model = _make_mock_gliner([
+            {"text": "Ниобий", "label": "MATERIAL", "score": 0.95},
+            {"text": "Chromium", "label": "MATERIAL", "score": 0.87},
         ])
 
         elements = [
@@ -431,8 +431,8 @@ class TestNERExtractor:
 
     def test_extract_entities_label_is_material(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "mat_name", "word": "Niobium", "score": 0.9},
+        extractor._model = _make_mock_gliner([
+            {"text": "Niobium", "label": "MATERIAL", "score": 0.9},
         ])
 
         elements = [UnifiedElement(type="text", text="Niobium is a metal", source_type=SourceType.TEXT)]
@@ -440,11 +440,25 @@ class TestNERExtractor:
         assert len(entities) == 1
         assert entities[0].label == EntityLabel.MATERIAL
 
+    def test_extract_entities_respects_label(self):
+        extractor = NERExtractor(model_name="mock-model")
+        extractor._model = _make_mock_gliner([
+            {"text": "отжиг", "label": "PROCESS", "score": 0.9},
+            {"text": "1100 °C", "label": "PARAMETER", "score": 0.85},
+        ])
+
+        elements = [UnifiedElement(type="text", text="отжиг при 1100 °C", source_type=SourceType.TEXT)]
+        entities = extractor.extract_entities(elements)
+        assert len(entities) == 2
+        labels = {e.name: e.label for e in entities}
+        assert labels["отжиг"] == EntityLabel.PROCESS
+        assert labels["1100 °c"] == EntityLabel.PARAMETER
+
     def test_extract_entities_deduplicates(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "mat_name", "word": "Ниобий", "score": 0.95},
-            {"entity_group": "mat_name", "word": "Ниобий", "score": 0.90},
+        extractor._model = _make_mock_gliner([
+            {"text": "Ниобий", "label": "MATERIAL", "score": 0.95},
+            {"text": "Ниобий", "label": "MATERIAL", "score": 0.90},
         ])
 
         elements = [UnifiedElement(type="text", text="Ниобий Ниобий", source_type=SourceType.TEXT)]
@@ -462,72 +476,20 @@ class TestNERExtractor:
         entities = extractor.extract_entities(elements)
         assert entities == []
 
-    def test_chunk_text_short(self):
+    def test_normalize_name(self):
         extractor = NERExtractor(model_name="mock")
-        chunks = extractor._chunk_text("Short text", max_chars=512)
-        assert chunks == ["Short text"]
-
-    def test_chunk_text_long(self):
-        extractor = NERExtractor(model_name="mock")
-        text = ". ".join(["word " * 50] * 10)
-        chunks = extractor._chunk_text(text, max_chars=512)
-        assert len(chunks) > 1
-        assert all(len(c) <= 550 for c in chunks)
-
-    def test_chunk_text_empty(self):
-        extractor = NERExtractor(model_name="mock")
-        chunks = extractor._chunk_text("")
-        assert chunks == [""]
-
-    def test_map_entity_label_mat_name_is_material(self):
-        extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("mat_name") == EntityLabel.MATERIAL
-        assert extractor._map_entity_label("mat_class") == EntityLabel.MATERIAL
-        assert extractor._map_entity_label("mat_form") == EntityLabel.MATERIAL
-
-    def test_map_entity_label_prop_is_property(self):
-        extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("prop") == EntityLabel.PROPERTY
-        assert extractor._map_entity_label("attribute") == EntityLabel.PROPERTY
-        assert extractor._map_entity_label("char") == EntityLabel.PROPERTY
-
-    def test_map_entity_label_manuf_is_process(self):
-        extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("manuf") == EntityLabel.PROCESS
-        assert extractor._map_entity_label("cell") == EntityLabel.PROCESS
-        assert extractor._map_entity_label("app") == EntityLabel.PROCESS
-
-    def test_map_entity_label_number_is_parameter(self):
-        extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("number") == EntityLabel.PARAMETER
-        assert extractor._map_entity_label("unit_measure") == EntityLabel.PARAMETER
-
-    def test_map_entity_label_unknown_defaults(self):
-        extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("unknown") == EntityLabel.MATERIAL
-        assert extractor._map_entity_label("foo") == EntityLabel.MATERIAL
-
-    def test_normalize_name_strips_markers(self):
-        extractor = NERExtractor(model_name="mock")
-        assert extractor._normalize_name("##Niobium") == "niobium"
         assert extractor._normalize_name(" Niobium ") == "niobium"
-        assert extractor._normalize_name("Niobium-1") == "niobium-1"
+        assert extractor._normalize_name(" 1100 °C ") == "1100 °c"
+        assert extractor._normalize_name("Сталь 20Х23Н18") == "сталь 20х23н18"
 
 
 class TestNERLabelMap:
-    def test_matbert_label_mapping(self):
+    def test_gliner_label_map(self):
         expected = {
-            "mat_name": EntityLabel.MATERIAL,
-            "mat_class": EntityLabel.MATERIAL,
-            "mat_form": EntityLabel.MATERIAL,
-            "prop": EntityLabel.PROPERTY,
-            "manuf": EntityLabel.PROCESS,
-            "number": EntityLabel.PARAMETER,
-            "unit_measure": EntityLabel.PARAMETER,
-            "attribute": EntityLabel.PROPERTY,
-            "char": EntityLabel.PROPERTY,
-            "cell": EntityLabel.PROCESS,
-            "app": EntityLabel.PROCESS,
+            "MATERIAL": EntityLabel.MATERIAL,
+            "PROCESS": EntityLabel.PROCESS,
+            "PROPERTY": EntityLabel.PROPERTY,
+            "PARAMETER": EntityLabel.PARAMETER,
         }
         assert NER_LABEL_MAP == expected
 

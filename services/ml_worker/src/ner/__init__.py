@@ -25,9 +25,11 @@ class NERPipeline:
         ner_model_name: Optional[str] = None,
         ner_device: int = -1,
         db_connection_string: Optional[str] = None,
+        ner_threshold: float = 0.5,
     ):
         self._ner_model_name = ner_model_name
         self._ner_device = ner_device
+        self._ner_threshold = ner_threshold
         self._db_connection_string = db_connection_string
         self._ner: Optional[NERExtractor] = None
         self._db: Optional[DBHandler] = None
@@ -36,8 +38,9 @@ class NERPipeline:
     def ner(self) -> NERExtractor:
         if self._ner is None:
             self._ner = NERExtractor(
-                model_name=self._ner_model_name or "AmedeoBonatti/nlp_te_ner_matbert",
+                model_name=self._ner_model_name or "knowledgator/gliner-multilingual-v2.1",
                 device=self._ner_device,
+                threshold=self._ner_threshold,
             )
         return self._ner
 
