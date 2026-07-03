@@ -411,8 +411,8 @@ class TestNERExtractor:
     def test_extract_entities_with_mocked_pipeline(self):
         extractor = NERExtractor(model_name="mock-model")
         extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "MISC", "word": "Ниобий", "score": 0.95},
-            {"entity_group": "MISC", "word": "Chromium", "score": 0.87},
+            {"entity_group": "mat_name", "word": "Ниобий", "score": 0.95},
+            {"entity_group": "mat_name", "word": "Chromium", "score": 0.87},
         ])
 
         elements = [
@@ -432,7 +432,7 @@ class TestNERExtractor:
     def test_extract_entities_label_is_material(self):
         extractor = NERExtractor(model_name="mock-model")
         extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "MISC", "word": "Niobium", "score": 0.9},
+            {"entity_group": "mat_name", "word": "Niobium", "score": 0.9},
         ])
 
         elements = [UnifiedElement(type="text", text="Niobium is a metal", source_type=SourceType.TEXT)]
@@ -443,8 +443,8 @@ class TestNERExtractor:
     def test_extract_entities_deduplicates(self):
         extractor = NERExtractor(model_name="mock-model")
         extractor._pipeline = _make_mock_ner_pipeline([
-            {"entity_group": "MISC", "word": "Ниобий", "score": 0.95},
-            {"entity_group": "MISC", "word": "Ниобий", "score": 0.90},
+            {"entity_group": "mat_name", "word": "Ниобий", "score": 0.95},
+            {"entity_group": "mat_name", "word": "Ниобий", "score": 0.90},
         ])
 
         elements = [UnifiedElement(type="text", text="Ниобий Ниобий", source_type=SourceType.TEXT)]
@@ -479,15 +479,33 @@ class TestNERExtractor:
         chunks = extractor._chunk_text("")
         assert chunks == [""]
 
-    def test_map_entity_label_misc(self):
+    def test_map_entity_label_mat_name_is_material(self):
         extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("MISC") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("mat_name") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("mat_class") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("mat_form") == EntityLabel.MATERIAL
+
+    def test_map_entity_label_prop_is_property(self):
+        extractor = NERExtractor(model_name="mock")
+        assert extractor._map_entity_label("prop") == EntityLabel.PROPERTY
+        assert extractor._map_entity_label("attribute") == EntityLabel.PROPERTY
+        assert extractor._map_entity_label("char") == EntityLabel.PROPERTY
+
+    def test_map_entity_label_manuf_is_process(self):
+        extractor = NERExtractor(model_name="mock")
+        assert extractor._map_entity_label("manuf") == EntityLabel.PROCESS
+        assert extractor._map_entity_label("cell") == EntityLabel.PROCESS
+        assert extractor._map_entity_label("app") == EntityLabel.PROCESS
+
+    def test_map_entity_label_number_is_parameter(self):
+        extractor = NERExtractor(model_name="mock")
+        assert extractor._map_entity_label("number") == EntityLabel.PARAMETER
+        assert extractor._map_entity_label("unit_measure") == EntityLabel.PARAMETER
 
     def test_map_entity_label_unknown_defaults(self):
         extractor = NERExtractor(model_name="mock")
-        assert extractor._map_entity_label("ORG") == EntityLabel.MATERIAL
-        assert extractor._map_entity_label("PER") == EntityLabel.MATERIAL
-        assert extractor._map_entity_label("LOC") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("unknown") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("foo") == EntityLabel.MATERIAL
 
     def test_normalize_name_strips_markers(self):
         extractor = NERExtractor(model_name="mock")
@@ -497,8 +515,21 @@ class TestNERExtractor:
 
 
 class TestNERLabelMap:
-    def test_only_misc_mapped(self):
-        assert NER_LABEL_MAP == {"MISC": EntityLabel.MATERIAL}
+    def test_matbert_label_mapping(self):
+        expected = {
+            "mat_name": EntityLabel.MATERIAL,
+            "mat_class": EntityLabel.MATERIAL,
+            "mat_form": EntityLabel.MATERIAL,
+            "prop": EntityLabel.PROPERTY,
+            "manuf": EntityLabel.PROCESS,
+            "number": EntityLabel.PARAMETER,
+            "unit_measure": EntityLabel.PARAMETER,
+            "attribute": EntityLabel.PROPERTY,
+            "char": EntityLabel.PROPERTY,
+            "cell": EntityLabel.PROCESS,
+            "app": EntityLabel.PROCESS,
+        }
+        assert NER_LABEL_MAP == expected
 
 
 # ─── DBHandler Tests ─────────────────────────────────────────────────────────

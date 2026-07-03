@@ -36,7 +36,7 @@ class NERPipeline:
     def ner(self) -> NERExtractor:
         if self._ner is None:
             self._ner = NERExtractor(
-                model_name=self._ner_model_name or "Babelscape/wikineural-multilingual-ner",
+                model_name=self._ner_model_name or "AmedeoBonatti/nlp_te_ner_matbert",
                 device=self._ner_device,
             )
         return self._ner

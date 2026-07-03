@@ -8,10 +8,20 @@ from models import Entity, EntityLabel, UnifiedElement
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_NER_MODEL = "Babelscape/wikineural-multilingual-ner"
+DEFAULT_NER_MODEL = "AmedeoBonatti/nlp_te_ner_matbert"
 
 NER_LABEL_MAP: dict[str, EntityLabel] = {
-    "MISC": EntityLabel.MATERIAL,
+    "mat_name": EntityLabel.MATERIAL,
+    "mat_class": EntityLabel.MATERIAL,
+    "mat_form": EntityLabel.MATERIAL,
+    "prop": EntityLabel.PROPERTY,
+    "manuf": EntityLabel.PROCESS,
+    "number": EntityLabel.PARAMETER,
+    "unit_measure": EntityLabel.PARAMETER,
+    "attribute": EntityLabel.PROPERTY,
+    "char": EntityLabel.PROPERTY,
+    "cell": EntityLabel.PROCESS,
+    "app": EntityLabel.PROCESS,
 }
 
 
