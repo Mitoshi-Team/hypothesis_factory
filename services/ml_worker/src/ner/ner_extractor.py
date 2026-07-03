@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from models import Entity, EntityLabel, UnifiedElement
 
@@ -43,7 +43,11 @@ class NERExtractor:
             return self._model
         from gliner import GLiNER
 
-        logger.info("Loading GLiNER model: %s (device=%s)", self._model_name, self._device)
+        logger.info(
+            "Loading GLiNER model: %s (device=%s)",
+            self._model_name,
+            self._device,
+        )
         self._model = GLiNER.from_pretrained(self._model_name)
         return self._model
 
@@ -66,7 +70,11 @@ class NERExtractor:
                     threshold=self._threshold,
                 )
             except Exception as exc:
-                logger.warning("GLiNER prediction failed on element %s: %s", el.element_id, exc)
+                logger.warning(
+                    "GLiNER prediction failed on element %s: %s",
+                    el.element_id,
+                    exc,
+                )
                 continue
 
             for item in raw:

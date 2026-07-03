@@ -38,7 +38,8 @@ class NERPipeline:
     def ner(self) -> NERExtractor:
         if self._ner is None:
             self._ner = NERExtractor(
-                model_name=self._ner_model_name or "knowledgator/gliner-multilingual-v2.1",
+                model_name=self._ner_model_name
+                or "knowledgator/gliner-multilingual-v2.1",
                 device=self._ner_device,
                 threshold=self._ner_threshold,
             )
@@ -53,7 +54,9 @@ class NERPipeline:
     def extract_document(self, file_path: str) -> UnifiedDocument:
         source_type = route_file(file_path)
         extractor = get_extractor(source_type)
-        logger.info("Extracting document: %s (type=%s)", file_path, source_type.value)
+        logger.info(
+            "Extracting document: %s (type=%s)", file_path, source_type.value
+        )
         return extractor.extract(file_path)
 
     def extract_entities(self, document: UnifiedDocument) -> list[Entity]:

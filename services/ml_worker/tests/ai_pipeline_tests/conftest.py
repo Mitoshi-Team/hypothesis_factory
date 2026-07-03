@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from ai_pipeline_tests.mixins.chroma_mixins import ChromaTestMixin
-from ai_pipeline_tests.mixins.chunking_mixins import ChunkingTestMixin
-from ai_pipeline_tests.mixins.db_mixins import DatabaseTestMixin
-from ai_pipeline_tests.mixins.llm_mixins import LLMTestMixin
+from .mixins.chroma_mixins import ChromaTestMixin
+from .mixins.chunking_mixins import ChunkingTestMixin
+from .mixins.db_mixins import DatabaseTestMixin
+from .mixins.llm_mixins import LLMTestMixin
 
 
 @pytest.fixture

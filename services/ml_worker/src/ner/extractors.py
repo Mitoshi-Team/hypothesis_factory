@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Optional
@@ -19,8 +18,7 @@ class BaseExtractor(ABC):
     source_type: SourceType
 
     @abstractmethod
-    def extract(self, file_path: str) -> UnifiedDocument:
-        ...
+    def extract(self, file_path: str) -> UnifiedDocument: ...
 
     def _make_document(
         self,
@@ -37,13 +35,13 @@ class BaseExtractor(ABC):
             ".markdown": "text/markdown",
             ".pdf": "application/pdf",
             ".xls": "application/vnd.ms-excel",
-            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
             ".csv": "text/csv",
             ".sql": "application/sql",
             ".db": "application/octet-stream",
             ".sqlite": "application/octet-stream",
             ".doc": "application/msword",
-            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # noqa: E501
         }
         source_bytes = path.read_bytes()
 
@@ -104,7 +102,9 @@ class PDFExtractor(BaseExtractor):
         )
 
     def _map_docling_type(self, item: Any) -> ElementType:
-        type_str = type(item).__name__.lower() if hasattr(item, "__class__") else ""
+        type_str = (
+            type(item).__name__.lower() if hasattr(item, "__class__") else ""
+        )
         mapping = {
             "title": ElementType.TITLE,
             "heading": ElementType.TITLE,
@@ -146,13 +146,15 @@ class PDFExtractor(BaseExtractor):
                 columns=list(df.columns),
                 rows=[list(row) for _, row in df.iterrows()],
                 cells=cells,
-                markdown=item.export_to_markdown() if hasattr(item, "export_to_markdown") else None,
+                markdown=item.export_to_markdown()
+                if hasattr(item, "export_to_markdown")
+                else None,
             )
         except Exception:
             return None
 
     def _fallback_extract(self, file_path: str) -> UnifiedDocument:
-        from PyPDF2 import PdfReader
+        from pypdf import PdfReader
 
         reader = PdfReader(file_path)
         elements: list[UnifiedElement] = []
@@ -164,14 +166,14 @@ class PDFExtractor(BaseExtractor):
                         type=ElementType.TEXT,
                         text=text,
                         page=page_num + 1,
-                        extractor="pypdf2",
+                        extractor="pypdf",
                         source_type=SourceType.PDF,
                     )
                 )
         return self._make_document(
             file_path=file_path,
             elements=elements,
-            extractor="pypdf2",
+            extractor="pypdf",
         )
 
 
@@ -188,7 +190,9 @@ class TextExtractor(BaseExtractor):
         from unstructured.partition.text import partition_text
 
         raw_elements = partition_text(filename=file_path)
-        elements = [self._convert_unstructured_element(el) for el in raw_elements]
+        elements = [
+            self._convert_unstructured_element(el) for el in raw_elements
+        ]
         return self._make_document(
             file_path=file_path,
             elements=elements,
@@ -256,7 +260,9 @@ class MarkdownExtractor(BaseExtractor):
         from unstructured.partition.md import partition_md
 
         raw_elements = partition_md(filename=file_path)
-        elements = [self._convert_unstructured_element(el) for el in raw_elements]
+        elements = [
+            self._convert_unstructured_element(el) for el in raw_elements
+        ]
         return self._make_document(
             file_path=file_path,
             elements=elements,
@@ -405,13 +411,16 @@ class DBExtractor(BaseExtractor):
         elements: list[UnifiedElement] = []
 
         for table_name in inspector.get_table_names():
-            columns = [col["name"] for col in inspector.get_columns(table_name)]
+            columns = [
+                col["name"] for col in inspector.get_columns(table_name)
+            ]
             with engine.connect() as conn:
-                result = conn.execute(text(f"SELECT * FROM {table_name}"))
+                result = conn.execute(text(f"SELECT * FROM {table_name}"))  # noqa: S608
                 rows = [list(row) for row in result.fetchall()]
 
             rows_serializable = [
-                [str(v) if v is not None else None for v in row] for row in rows
+                [str(v) if v is not None else None for v in row]
+                for row in rows
             ]
             cells = [
                 TableCell(
@@ -433,7 +442,11 @@ class DBExtractor(BaseExtractor):
             elements.append(
                 UnifiedElement(
                     type=ElementType.TABLE,
-                    text=f"Table: {table_name}\nColumns: {', '.join(columns)}\nRows: {len(rows)}",
+                    text=(
+                        f"Table: {table_name}\n"
+                        f"Columns: {', '.join(columns)}\n"
+                        f"Rows: {len(rows)}"
+                    ),
                     table_data=table_data,
                     extractor="sqlalchemy",
                     source_type=SourceType.DATABASE,
@@ -471,7 +484,6 @@ class DocExtractor(BaseExtractor):
 
     def _extract_docx(self, file_path: str) -> UnifiedDocument:
         from docx import Document as DocxDocument
-        from docx.oxml.ns import qn
 
         doc = DocxDocument(file_path)
         elements: list[UnifiedElement] = []
@@ -502,7 +514,9 @@ class DocExtractor(BaseExtractor):
                 style_name = para.style.name.lower() if para.style else ""
                 if "heading" in style_name or "title" in style_name:
                     level = None
-                    for part in style_name.replace("heading", "").strip().split():
+                    for part in (
+                        style_name.replace("heading", "").strip().split()
+                    ):
                         if part.isdigit():
                             level = int(part)
                             break
@@ -554,7 +568,9 @@ class DocExtractor(BaseExtractor):
         from unstructured.partition.doc import partition_doc
 
         raw_elements = partition_doc(filename=file_path)
-        elements = [self._convert_unstructured_element(el) for el in raw_elements]
+        elements = [
+            self._convert_unstructured_element(el) for el in raw_elements
+        ]
         return self._make_document(
             file_path=file_path,
             elements=elements,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import sqlite3
 import sys
 import tempfile
@@ -10,10 +9,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from models import Entity, EntityLabel, SourceType, TableData, UnifiedDocument, UnifiedElement
+from models import EntityLabel, SourceType, UnifiedDocument, UnifiedElement
 from ner.db_handler import DBHandler
-from ner.ner_extractor import NERExtractor, NER_LABEL_MAP
-from ner.router import EXTENSION_MAP, route_file
 from ner.extractors import (
     DBExtractor,
     DocExtractor,
@@ -23,6 +20,8 @@ from ner.extractors import (
     TextExtractor,
     get_extractor,
 )
+from ner.ner_extractor import NER_LABEL_MAP, NERExtractor
+from ner.router import EXTENSION_MAP, route_file
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -75,11 +74,13 @@ def xlsx_file(tmp_dir: Path) -> Path:
     import pandas as pd
 
     path = tmp_dir / "test.xlsx"
-    df = pd.DataFrame({
-        "Material": ["Ниобий", "Хром", "Никель"],
-        "Property": ["Жаропрочность", "Коррозия", "Прочность"],
-        "Value": [1200, 800, 950],
-    })
+    df = pd.DataFrame(
+        {
+            "Material": ["Ниобий", "Хром", "Никель"],
+            "Property": ["Жаропрочность", "Коррозия", "Прочность"],
+            "Value": [1200, 800, 950],
+        }
+    )
     df.to_excel(str(path), sheet_name="Materials", index=False)
     return path
 
@@ -116,9 +117,7 @@ def db_file(tmp_dir: Path) -> Path:
     conn.execute(
         "INSERT INTO materials VALUES (1, 'Ниобий', 'Жаропрочность', 1200)"
     )
-    conn.execute(
-        "INSERT INTO materials VALUES (2, 'Хром', 'Коррозия', 800)"
-    )
+    conn.execute("INSERT INTO materials VALUES (2, 'Хром', 'Коррозия', 800)")
     conn.commit()
     conn.close()
     return path
@@ -168,7 +167,9 @@ def _make_mock_gliner(entities: list[dict]):
         def __init__(self, ents):
             self._ents = ents
 
-        def predict_entities(self, text: str, labels: list[str], threshold: float = 0.5):
+        def predict_entities(
+            self, text: str, labels: list[str], threshold: float = 0.5
+        ):
             return self._ents
 
     return MockGLiNER(entities)
@@ -218,7 +219,9 @@ class TestRouter:
     def test_extension_map_coverage(self):
         all_types = set(SourceType)
         mapped_types = set(EXTENSION_MAP.values())
-        assert all_types == mapped_types, f"Missing: {all_types - mapped_types}"
+        assert all_types == mapped_types, (
+            f"Missing: {all_types - mapped_types}"
+        )
 
 
 # ─── Extractor Tests ─────────────────────────────────────────────────────────
@@ -227,7 +230,9 @@ class TestRouter:
 class TestGetExtractor:
     def test_get_extractor_returns_correct_type(self):
         assert isinstance(get_extractor(SourceType.TEXT), TextExtractor)
-        assert isinstance(get_extractor(SourceType.MARKDOWN), MarkdownExtractor)
+        assert isinstance(
+            get_extractor(SourceType.MARKDOWN), MarkdownExtractor
+        )
         assert isinstance(get_extractor(SourceType.PDF), PDFExtractor)
         assert isinstance(get_extractor(SourceType.EXCEL), ExcelExtractor)
         assert isinstance(get_extractor(SourceType.DATABASE), DBExtractor)
@@ -391,12 +396,12 @@ class TestDBExtractor:
         assert td.name == "materials"
 
     def test_resolve_db_url_sqlite(self):
-        url = DBExtractor._resolve_db_url("/tmp/test.db")
+        url = DBExtractor._resolve_db_url("/tmp/test.db")  # noqa: S108
         assert url.startswith("sqlite:///")
 
     def test_resolve_db_url_csv_raises(self):
         with pytest.raises(ValueError, match="CSV"):
-            DBExtractor._resolve_db_url("/tmp/test.csv")
+            DBExtractor._resolve_db_url("/tmp/test.csv")  # noqa: S108
 
     def test_extract_nonexistent_db_raises(self):
         extractor = DBExtractor()
@@ -410,10 +415,12 @@ class TestDBExtractor:
 class TestNERExtractor:
     def test_extract_entities_with_mocked_gliner(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._model = _make_mock_gliner([
-            {"text": "Ниобий", "label": "MATERIAL", "score": 0.95},
-            {"text": "Chromium", "label": "MATERIAL", "score": 0.87},
-        ])
+        extractor._model = _make_mock_gliner(
+            [
+                {"text": "Ниобий", "label": "MATERIAL", "score": 0.95},
+                {"text": "Chromium", "label": "MATERIAL", "score": 0.87},
+            ]
+        )
 
         elements = [
             UnifiedElement(
@@ -431,23 +438,39 @@ class TestNERExtractor:
 
     def test_extract_entities_label_is_material(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._model = _make_mock_gliner([
-            {"text": "Niobium", "label": "MATERIAL", "score": 0.9},
-        ])
+        extractor._model = _make_mock_gliner(
+            [
+                {"text": "Niobium", "label": "MATERIAL", "score": 0.9},
+            ]
+        )
 
-        elements = [UnifiedElement(type="text", text="Niobium is a metal", source_type=SourceType.TEXT)]
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="Niobium is a metal",
+                source_type=SourceType.TEXT,
+            )
+        ]
         entities = extractor.extract_entities(elements)
         assert len(entities) == 1
         assert entities[0].label == EntityLabel.MATERIAL
 
     def test_extract_entities_respects_label(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._model = _make_mock_gliner([
-            {"text": "отжиг", "label": "PROCESS", "score": 0.9},
-            {"text": "1100 °C", "label": "PARAMETER", "score": 0.85},
-        ])
+        extractor._model = _make_mock_gliner(
+            [
+                {"text": "отжиг", "label": "PROCESS", "score": 0.9},
+                {"text": "1100 °C", "label": "PARAMETER", "score": 0.85},
+            ]
+        )
 
-        elements = [UnifiedElement(type="text", text="отжиг при 1100 °C", source_type=SourceType.TEXT)]
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="отжиг при 1100 °C",
+                source_type=SourceType.TEXT,
+            )
+        ]
         entities = extractor.extract_entities(elements)
         assert len(entities) == 2
         labels = {e.name: e.label for e in entities}
@@ -456,12 +479,18 @@ class TestNERExtractor:
 
     def test_extract_entities_deduplicates(self):
         extractor = NERExtractor(model_name="mock-model")
-        extractor._model = _make_mock_gliner([
-            {"text": "Ниобий", "label": "MATERIAL", "score": 0.95},
-            {"text": "Ниобий", "label": "MATERIAL", "score": 0.90},
-        ])
+        extractor._model = _make_mock_gliner(
+            [
+                {"text": "Ниобий", "label": "MATERIAL", "score": 0.95},
+                {"text": "Ниобий", "label": "MATERIAL", "score": 0.90},
+            ]
+        )
 
-        elements = [UnifiedElement(type="text", text="Ниобий Ниобий", source_type=SourceType.TEXT)]
+        elements = [
+            UnifiedElement(
+                type="text", text="Ниобий Ниобий", source_type=SourceType.TEXT
+            )
+        ]
         entities = extractor.extract_entities(elements)
         assert len(entities) == 1
 
@@ -472,7 +501,9 @@ class TestNERExtractor:
 
     def test_extract_entities_empty_text(self):
         extractor = NERExtractor(model_name="mock-model")
-        elements = [UnifiedElement(type="text", text="", source_type=SourceType.TEXT)]
+        elements = [
+            UnifiedElement(type="text", text="", source_type=SourceType.TEXT)
+        ]
         entities = extractor.extract_entities(elements)
         assert entities == []
 
@@ -500,7 +531,9 @@ class TestNERLabelMap:
 class TestDBHandler:
     def test_copy_tables_logs(self):
         handler = DBHandler()
-        doc = UnifiedDocument(source_type=SourceType.TEXT, source_uri="/dev/null")
+        doc = UnifiedDocument(
+            source_type=SourceType.TEXT, source_uri="/dev/null"
+        )
         handler.copy_tables(doc)
 
     def test_save_entities_logs(self):

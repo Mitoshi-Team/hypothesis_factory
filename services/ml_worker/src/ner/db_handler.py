@@ -14,7 +14,10 @@ class DBHandler:
 
     def copy_tables(self, document: UnifiedDocument) -> None:
         logger.info(
-            "STUB: copy_tables( doc_id=%s, tables=%d ) — PostgreSQL insert skipped",
+            (  # noqa: E501
+                "STUB: copy_tables( doc_id=%s, tables=%d ) —"
+                " PostgreSQL insert skipped"
+            ),
             document.document_id,
             len(document.get_tables()),
         )
