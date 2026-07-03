@@ -1,0 +1,616 @@
+from __future__ import annotations
+
+import re
+import sqlite3
+import sys
+import tempfile
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from models import (
+    Entity,
+    EntityLabel,
+    Relation,
+    RelationType,
+    SourceType,
+    TableData,
+    UnifiedDocument,
+    UnifiedElement,
+)
+from ner.db_handler import DBHandler
+from ner.ner_extractor import NERExtractor, NER_LABEL_MAP, RELATION_PATTERNS
+from ner.router import EXTENSION_MAP, route_file
+from ner.extractors import (
+    DBExtractor,
+    ExcelExtractor,
+    MarkdownExtractor,
+    PDFExtractor,
+    TextExtractor,
+    get_extractor,
+)
+
+# ─── Fixtures ────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def tmp_dir():
+    with tempfile.TemporaryDirectory() as d:
+        yield Path(d)
+
+
+@pytest.fixture
+def txt_file(tmp_dir: Path) -> Path:
+    path = tmp_dir / "test.txt"
+    path.write_text(
+        "Ниобий повышает жаропрочность стали.\n"
+        "The addition of nickel increases corrosion resistance.\n"
+        "Содержание хрома в нержавеющей стали составляет 18%.\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+@pytest.fixture
+def md_file(tmp_dir: Path) -> Path:
+    path = tmp_dir / "test.md"
+    path.write_text(
+        "# Introduction\n"
+        "This document describes material properties.\n"
+        "\n"
+        "- Ниобий\n"
+        "- Хром\n"
+        "- Никель\n"
+        "\n"
+        "## Properties\n"
+        "Жаропрочность and corrosion resistance are key.\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+@pytest.fixture
+def pdf_file(tmp_dir: Path) -> Path:
+    path = tmp_dir / "test.pdf"
+    _create_minimal_pdf(path, "Test PDF content with nickel alloy")
+    return path
+
+
+@pytest.fixture
+def xlsx_file(tmp_dir: Path) -> Path:
+    import pandas as pd
+
+    path = tmp_dir / "test.xlsx"
+    df = pd.DataFrame({
+        "Material": ["Ниобий", "Хром", "Никель"],
+        "Property": ["Жаропрочность", "Коррозия", "Прочность"],
+        "Value": [1200, 800, 950],
+    })
+    df.to_excel(str(path), sheet_name="Materials", index=False)
+    return path
+
+
+@pytest.fixture
+def db_file(tmp_dir: Path) -> Path:
+    path = tmp_dir / "test.db"
+    conn = sqlite3.connect(str(path))
+    conn.execute(
+        "CREATE TABLE materials (id INTEGER, name TEXT, property TEXT, value REAL)"
+    )
+    conn.execute(
+        "INSERT INTO materials VALUES (1, 'Ниобий', 'Жаропрочность', 1200)"
+    )
+    conn.execute(
+        "INSERT INTO materials VALUES (2, 'Хром', 'Коррозия', 800)"
+    )
+    conn.commit()
+    conn.close()
+    return path
+
+
+def _create_minimal_pdf(path: Path, text: str):
+    text_bytes = text.encode("latin-1")
+    stream_data = b"BT /F1 12 Tf 100 700 Td(" + text_bytes + b")Tj ET"
+
+    objs = [
+        b"%PDF-1.4",
+        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj",
+        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj",
+        b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R"
+        b"/Resources<</Font<</F1 5 0 R>>>>>>endobj",
+        b"4 0 obj<</Length "
+        + str(len(stream_data)).encode()
+        + b">>\nstream\n"
+        + stream_data
+        + b"\nendstream\nendobj",
+        b"5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj",
+    ]
+
+    body = b"\n".join(objs)
+    offsets = [0] * 6
+    offsets[1] = 0
+    current = len(objs[1]) + 1
+    for i in range(2, 6):
+        offsets[i] = current
+        current += len(objs[i]) + 1
+
+    xref_offset = current
+    xref_lines = [b"xref", b"0 6", b"0000000000 65535 f "]
+    for i in range(1, 6):
+        xref_lines.append(f"{offsets[i]:010d} 00000 n ".encode())
+    xref = b"\n".join(xref_lines)
+    trailer = (
+        b"\ntrailer\n<</Size 6/Root 1 0 R>>\nstartxref\n"
+        + str(xref_offset).encode()
+        + b"\n%%EOF"
+    )
+    path.write_bytes(body + b"\n" + xref + trailer)
+
+
+def _make_mock_ner_pipeline(entities: list[dict]):
+    """Create a mock transformers pipeline for testing NERExtractor."""
+
+    class MockPipeline:
+        def __init__(self, ents):
+            self._ents = ents
+
+        def __call__(self, text: str, **kwargs):
+            return self._ents
+
+    return MockPipeline(entities)
+
+
+# ─── Router Tests ────────────────────────────────────────────────────────────
+
+
+class TestRouter:
+    def test_route_txt(self):
+        assert route_file("file.txt") == SourceType.TEXT
+
+    def test_route_markdown(self):
+        assert route_file("file.md") == SourceType.MARKDOWN
+        assert route_file("file.markdown") == SourceType.MARKDOWN
+        assert route_file("file.mdown") == SourceType.MARKDOWN
+
+    def test_route_pdf(self):
+        assert route_file("file.pdf") == SourceType.PDF
+
+    def test_route_excel(self):
+        assert route_file("file.xlsx") == SourceType.EXCEL
+        assert route_file("file.xls") == SourceType.EXCEL
+
+    def test_route_database(self):
+        assert route_file("file.db") == SourceType.DATABASE
+        assert route_file("file.sqlite") == SourceType.DATABASE
+        assert route_file("file.sql") == SourceType.DATABASE
+        assert route_file("file.csv") == SourceType.DATABASE
+
+    def test_route_case_insensitive(self):
+        assert route_file("FILE.TXT") == SourceType.TEXT
+        assert route_file("File.PDF") == SourceType.PDF
+
+    def test_route_unknown_raises(self):
+        with pytest.raises(ValueError, match="Unsupported file extension"):
+            route_file("file.xyz")
+
+    def test_route_no_extension_raises(self):
+        with pytest.raises(ValueError):
+            route_file("file")
+
+    def test_extension_map_coverage(self):
+        all_types = set(SourceType)
+        mapped_types = set(EXTENSION_MAP.values())
+        assert all_types == mapped_types, f"Missing: {all_types - mapped_types}"
+
+
+# ─── Extractor Tests ─────────────────────────────────────────────────────────
+
+
+class TestGetExtractor:
+    def test_get_extractor_returns_correct_type(self):
+        assert isinstance(get_extractor(SourceType.TEXT), TextExtractor)
+        assert isinstance(get_extractor(SourceType.MARKDOWN), MarkdownExtractor)
+        assert isinstance(get_extractor(SourceType.PDF), PDFExtractor)
+        assert isinstance(get_extractor(SourceType.EXCEL), ExcelExtractor)
+        assert isinstance(get_extractor(SourceType.DATABASE), DBExtractor)
+
+    def test_get_extractor_unknown_raises(self):
+        with pytest.raises(ValueError):
+            get_extractor("unknown")
+
+
+class TestTextExtractor:
+    def test_extract_returns_unified_document(self, txt_file: Path):
+        extractor = TextExtractor()
+        doc = extractor.extract(str(txt_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.TEXT
+        assert doc.source_uri == str(txt_file.absolute())
+
+    def test_extract_contains_elements(self, txt_file: Path):
+        extractor = TextExtractor()
+        doc = extractor.extract(str(txt_file))
+        assert len(doc.elements) > 0
+        assert any("ниобий" in el.text.lower() for el in doc.elements)
+
+    def test_extract_has_checksum(self, txt_file: Path):
+        extractor = TextExtractor()
+        doc = extractor.extract(str(txt_file))
+        assert doc.checksum is not None
+        assert len(doc.checksum) == 64
+
+    def test_extract_empty_file(self, tmp_dir: Path):
+        path = tmp_dir / "empty.txt"
+        path.write_text("")
+        extractor = TextExtractor()
+        doc = extractor.extract(str(path))
+        assert len(doc.elements) == 0
+
+
+class TestMarkdownExtractor:
+    def test_extract_parses_headings(self, md_file: Path):
+        extractor = MarkdownExtractor()
+        doc = extractor.extract(str(md_file))
+        assert len(doc.elements) > 0
+
+    def test_extract_returns_unified_document(self, md_file: Path):
+        extractor = MarkdownExtractor()
+        doc = extractor.extract(str(md_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.MARKDOWN
+
+
+class TestPDFExtractor:
+    def test_extract_fallback_returns_document(self, pdf_file: Path):
+        extractor = PDFExtractor()
+        doc = extractor.extract(str(pdf_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.PDF
+
+    def test_extract_fallback_contains_text(self, pdf_file: Path):
+        extractor = PDFExtractor()
+        doc = extractor.extract(str(pdf_file))
+        texts = [el.text for el in doc.elements]
+        combined = " ".join(texts)
+        assert "nickel" in combined.lower() or "alloy" in combined.lower()
+
+    def test_extract_nonexistent_file_raises(self):
+        extractor = PDFExtractor()
+        with pytest.raises(FileNotFoundError):
+            extractor.extract("/nonexistent/file.pdf")
+
+
+class TestExcelExtractor:
+    def test_extract_returns_document(self, xlsx_file: Path):
+        extractor = ExcelExtractor()
+        doc = extractor.extract(str(xlsx_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.EXCEL
+
+    def test_extract_contains_table_data(self, xlsx_file: Path):
+        extractor = ExcelExtractor()
+        doc = extractor.extract(str(xlsx_file))
+        assert len(doc.elements) > 0
+        table_el = doc.elements[0]
+        assert table_el.table_data is not None
+        assert "Ниобий" in str(table_el.table_data.rows)
+
+    def test_extract_sheet_name_in_table_data(self, xlsx_file: Path):
+        extractor = ExcelExtractor()
+        doc = extractor.extract(str(xlsx_file))
+        td = doc.elements[0].table_data
+        assert td.name == "Materials"
+
+
+class TestDBExtractor:
+    def test_extract_returns_document(self, db_file: Path):
+        extractor = DBExtractor()
+        doc = extractor.extract(str(db_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.DATABASE
+
+    def test_extract_reads_tables(self, db_file: Path):
+        extractor = DBExtractor()
+        doc = extractor.extract(str(db_file))
+        assert len(doc.elements) > 0
+        for el in doc.elements:
+            assert el.table_data is not None
+
+    def test_extract_table_has_rows(self, db_file: Path):
+        extractor = DBExtractor()
+        doc = extractor.extract(str(db_file))
+        td = doc.elements[0].table_data
+        assert len(td.rows) >= 2
+        assert td.name == "materials"
+
+    def test_resolve_db_url_sqlite(self):
+        url = DBExtractor._resolve_db_url("/tmp/test.db")
+        assert url.startswith("sqlite:///")
+
+    def test_resolve_db_url_csv_raises(self):
+        with pytest.raises(ValueError, match="CSV"):
+            DBExtractor._resolve_db_url("/tmp/test.csv")
+
+    def test_extract_nonexistent_db_raises(self):
+        extractor = DBExtractor()
+        with pytest.raises(Exception):
+            extractor.extract("/nonexistent/test.db")
+
+
+# ─── NERExtractor Tests ──────────────────────────────────────────────────────
+
+
+class TestNERExtractor:
+    def test_extract_entities_with_mocked_pipeline(self):
+        extractor = NERExtractor(model_name="mock-model")
+        extractor._pipeline = _make_mock_ner_pipeline([
+            {"entity_group": "MISC", "word": "Ниобий", "score": 0.95},
+            {"entity_group": "MISC", "word": "Chromium", "score": 0.87},
+        ])
+
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="Ниобий and Chromium are materials",
+                source_type=SourceType.TEXT,
+            )
+        ]
+        entities = extractor.extract_entities(elements)
+        assert len(entities) == 2
+
+        names = [e.name for e in entities]
+        assert "ниобий" in names
+        assert "chromium" in names
+
+    def test_extract_entities_label_mapping(self):
+        extractor = NERExtractor(model_name="mock-model")
+        extractor._pipeline = _make_mock_ner_pipeline([
+            {"entity_group": "MISC", "word": "MaterialX", "score": 0.9},
+            {"entity_group": "ORG", "word": "ProcessY", "score": 0.8},
+        ])
+
+        elements = [UnifiedElement(type="text", text="MaterialX and ProcessY", source_type=SourceType.TEXT)]
+        entities = extractor.extract_entities(elements)
+
+        labels = {e.name: e.label for e in entities}
+        assert labels["materialx"] == EntityLabel.MATERIAL
+        assert labels["processy"] == EntityLabel.PROCESS
+
+    def test_extract_entities_deduplicates(self):
+        extractor = NERExtractor(model_name="mock-model")
+        extractor._pipeline = _make_mock_ner_pipeline([
+            {"entity_group": "MISC", "word": "Ниобий", "score": 0.95},
+            {"entity_group": "MISC", "word": "Ниобий", "score": 0.90},
+        ])
+
+        elements = [UnifiedElement(type="text", text="Ниобий Ниобий", source_type=SourceType.TEXT)]
+        entities = extractor.extract_entities(elements)
+        assert len(entities) == 1
+
+    def test_extract_entities_empty_elements(self):
+        extractor = NERExtractor(model_name="mock-model")
+        entities = extractor.extract_entities([])
+        assert entities == []
+
+    def test_extract_entities_empty_text(self):
+        extractor = NERExtractor(model_name="mock-model")
+        elements = [UnifiedElement(type="text", text="", source_type=SourceType.TEXT)]
+        entities = extractor.extract_entities(elements)
+        assert entities == []
+
+    def test_chunk_text_short(self):
+        extractor = NERExtractor(model_name="mock")
+        chunks = extractor._chunk_text("Short text", max_chars=512)
+        assert chunks == ["Short text"]
+
+    def test_chunk_text_long(self):
+        extractor = NERExtractor(model_name="mock")
+        text = ". ".join(["word " * 50] * 10)
+        chunks = extractor._chunk_text(text, max_chars=512)
+        assert len(chunks) > 1
+        assert all(len(c) <= 550 for c in chunks)
+
+    def test_chunk_text_empty(self):
+        extractor = NERExtractor(model_name="mock")
+        chunks = extractor._chunk_text("")
+        assert chunks == [""]
+
+    def test_map_entity_label_known(self):
+        extractor = NERExtractor(model_name="mock")
+        assert extractor._map_entity_label("MISC") == EntityLabel.MATERIAL
+        assert extractor._map_entity_label("ORG") == EntityLabel.PROCESS
+        assert extractor._map_entity_label("PER") == EntityLabel.PARAMETER
+        assert extractor._map_entity_label("LOC") == EntityLabel.MATERIAL
+
+    def test_map_entity_label_unknown_defaults(self):
+        extractor = NERExtractor(model_name="mock")
+        assert extractor._map_entity_label("UNKNOWN") == EntityLabel.MATERIAL
+
+    def test_normalize_name_strips_markers(self):
+        extractor = NERExtractor(model_name="mock")
+        assert extractor._normalize_name("##Niobium") == "niobium"
+        assert extractor._normalize_name(" Niobium ") == "niobium"
+        assert extractor._normalize_name("Niobium-1") == "niobium-1"
+
+    def test_extract_relations_empty_entities(self):
+        extractor = NERExtractor(model_name="mock")
+        relations = extractor.extract_relations([], [])
+        assert relations == []
+
+    def test_extract_relations_single_entity(self):
+        extractor = NERExtractor(model_name="mock")
+        entities = [Entity(label=EntityLabel.MATERIAL, name="ниобий")]
+        elements = [UnifiedElement(type="text", text="ниобий", source_type=SourceType.TEXT)]
+        relations = extractor.extract_relations(entities, elements)
+        assert relations == []
+
+    def test_extract_relations_with_pattern(self):
+        extractor = NERExtractor(model_name="mock")
+        entities = [
+            Entity(entity_id="e1", label=EntityLabel.MATERIAL, name="ниобий"),
+            Entity(entity_id="e2", label=EntityLabel.PROPERTY, name="жаропрочность"),
+        ]
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="Ниобий повышает жаропрочность стали",
+                source_type=SourceType.TEXT,
+            )
+        ]
+        relations = extractor.extract_relations(entities, elements)
+        assert len(relations) >= 1
+        assert any(
+            r.source_id == "e1" and r.target_id == "e2"
+            for r in relations
+        )
+
+    def test_extract_relations_with_english_pattern(self):
+        extractor = NERExtractor(model_name="mock")
+        entities = [
+            Entity(entity_id="e1", label=EntityLabel.MATERIAL, name="nickel"),
+            Entity(entity_id="e2", label=EntityLabel.PROPERTY, name="corrosion resistance"),
+        ]
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="Nickel increases corrosion resistance",
+                source_type=SourceType.TEXT,
+            )
+        ]
+        relations = extractor.extract_relations(entities, elements)
+        rels = [r for r in relations if r.source_id == "e1" and r.target_id == "e2"]
+        assert any(r.relation_type == RelationType.INFLUENCES for r in rels)
+
+    def test_extract_relations_cooccurrence(self):
+        extractor = NERExtractor(model_name="mock")
+        entities = [
+            Entity(entity_id="e1", label=EntityLabel.MATERIAL, name="ниобий"),
+            Entity(entity_id="e2", label=EntityLabel.MATERIAL, name="хром"),
+        ]
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="Ниобий и хром используются в сплавах",
+                source_type=SourceType.TEXT,
+            )
+        ]
+        relations = extractor.extract_relations(entities, elements)
+        assert len(relations) >= 1
+
+    def test_split_sentences(self):
+        extractor = NERExtractor(model_name="mock")
+        sents = extractor._split_sentences("One. Two! Three? Four")
+        assert len(sents) == 4
+
+    def test_extract_entities_and_relations(self):
+        extractor = NERExtractor(model_name="mock")
+        extractor._pipeline = _make_mock_ner_pipeline([
+            {"entity_group": "MISC", "word": "Ниобий", "score": 0.95},
+            {"entity_group": "MISC", "word": "Жаропрочность", "score": 0.85},
+        ])
+        elements = [
+            UnifiedElement(
+                type="text",
+                text="Ниобий повышает жаропрочность стали",
+                source_type=SourceType.TEXT,
+            )
+        ]
+        ents, rels = extractor.extract_entities_and_relations(elements)
+        assert len(ents) == 2
+        assert len(rels) >= 1
+
+
+class TestNERLabelMap:
+    def test_all_labels_mapped(self):
+        for label in ("MISC", "ORG", "PER", "LOC"):
+            assert label in NER_LABEL_MAP
+
+
+class TestRelationPatterns:
+    def test_patterns_cover_all_types(self):
+        covered = {rt for _, rt, _ in RELATION_PATTERNS}
+        for rt in RelationType:
+            assert rt in covered, f"Missing pattern for {rt}"
+
+    def test_russian_patterns_compile(self):
+        for pattern_str, _, _ in RELATION_PATTERNS:
+            assert re.compile(pattern_str, re.IGNORECASE)
+
+    def test_english_patterns_compile(self):
+        for pattern_str, _, _ in RELATION_PATTERNS:
+            assert re.compile(pattern_str, re.IGNORECASE)
+
+    def test_influences_pattern_matches(self):
+        import re
+        for pattern_str, rt, _ in RELATION_PATTERNS:
+            if rt == RelationType.INFLUENCES:
+                assert re.search(pattern_str, "увеличивает", re.IGNORECASE)
+                assert re.search(pattern_str, "increases", re.IGNORECASE)
+                break
+
+
+# ─── DBHandler Tests ─────────────────────────────────────────────────────────
+
+
+class TestDBHandler:
+    def test_copy_tables_no_tables(self):
+        handler = DBHandler()
+        doc = UnifiedDocument(
+            source_type=SourceType.TEXT,
+            source_uri="/dev/null",
+        )
+        handler.copy_tables(doc)
+
+    def test_copy_tables_with_table(self):
+        handler = DBHandler()
+        td = TableData(name="test", columns=["a"], rows=[["1"]])
+        el = UnifiedElement(
+            type="table",
+            text="test table",
+            table_data=td,
+            source_type=SourceType.EXCEL,
+        )
+        doc = UnifiedDocument(
+            source_type=SourceType.EXCEL,
+            source_uri="/dev/null",
+            elements=[el],
+        )
+        handler.copy_tables(doc)
+
+    def test_save_entities_empty(self):
+        handler = DBHandler()
+        handler.save_entities([])
+
+    def test_save_entities_with_data(self):
+        handler = DBHandler()
+        entities = [
+            Entity(label=EntityLabel.MATERIAL, name="ниобий"),
+        ]
+        handler.save_entities(entities)
+
+    def test_save_relations_empty(self):
+        handler = DBHandler()
+        handler.save_relations([])
+
+    def test_save_relations_with_data(self):
+        handler = DBHandler()
+        relations = [
+            Relation(
+                source_id="e1",
+                target_id="e2",
+                relation_type=RelationType.CONTAINS,
+            ),
+        ]
+        handler.save_relations(relations)
+
+    def test_stub_insert_table(self):
+        td = TableData(name="test", columns=["a"], rows=[["1"]])
+        el = UnifiedElement(
+            type="table",
+            text="test",
+            table_data=td,
+            source_type=SourceType.EXCEL,
+        )
+        DBHandler._stub_insert_table("doc-1", el)
