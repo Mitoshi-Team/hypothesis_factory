@@ -6,8 +6,8 @@ from typing import Any, Optional
 import chromadb
 from chromadb.api.models.Collection import Collection
 from chromadb.config import Settings as ChromaSettings
-from config import settings
-from models import Chunk
+from src.config import settings
+from src.models import Chunk
 
 
 class ChromaStore:

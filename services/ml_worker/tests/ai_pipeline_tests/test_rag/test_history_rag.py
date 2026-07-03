@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from ai_pipeline.rag.history_rag import HistoryRAG
-from ai_pipeline.state import HypothesisCard, HypothesisReview
+from src.ai_pipeline.rag.history_rag import HistoryRAG
+from src.ai_pipeline.state import HypothesisCard, HypothesisReview
 
 
 class TestHistoryRAG:

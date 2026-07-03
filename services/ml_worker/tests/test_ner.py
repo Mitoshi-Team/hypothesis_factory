@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 import sqlite3
-import sys
 import tempfile
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from models import EntityLabel, SourceType, UnifiedDocument, UnifiedElement
-from ner.db_handler import DBHandler
-from ner.extractors import (
+from src.models import EntityLabel, SourceType, UnifiedDocument, UnifiedElement
+from src.ner.db_handler import DBHandler
+from src.ner.extractors import (
     DBExtractor,
     DocExtractor,
     ExcelExtractor,
@@ -20,8 +16,8 @@ from ner.extractors import (
     TextExtractor,
     get_extractor,
 )
-from ner.ner_extractor import NER_LABEL_MAP, NERExtractor
-from ner.router import EXTENSION_MAP, route_file
+from src.ner.ner_extractor import NER_LABEL_MAP, NERExtractor
+from src.ner.router import EXTENSION_MAP, route_file
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 

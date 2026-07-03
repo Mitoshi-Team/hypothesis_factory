@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from ai_pipeline.tools.postgres_tools import PostgresTools
+from src.ai_pipeline.tools.postgres_tools import PostgresTools
 
 
 class TestPostgresTools:

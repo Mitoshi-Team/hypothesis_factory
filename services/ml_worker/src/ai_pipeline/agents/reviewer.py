@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
-from ai_pipeline.state import HypothesisCard, HypothesisReview
+from src.ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
+from src.ai_pipeline.state import HypothesisCard, HypothesisReview
 
 
 class ReviewerAgent:

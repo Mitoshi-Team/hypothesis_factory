@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import asyncpg
-from config import settings
+from src.config import settings
 
 
 class PostgresTools:

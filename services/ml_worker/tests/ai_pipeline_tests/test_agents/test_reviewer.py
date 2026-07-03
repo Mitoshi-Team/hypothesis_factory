@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ai_pipeline.agents.reviewer import ReviewerAgent
+from src.ai_pipeline.agents.reviewer import ReviewerAgent
 
 
 class TestReviewerAgent:

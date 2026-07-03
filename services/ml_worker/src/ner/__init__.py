@@ -3,13 +3,12 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from models import Entity, UnifiedDocument
 from pydantic import BaseModel
-
-from ner.db_handler import DBHandler
-from ner.extractors import get_extractor
-from ner.ner_extractor import NERExtractor
-from ner.router import route_file
+from src.models import Entity, UnifiedDocument
+from src.ner.db_handler import DBHandler
+from src.ner.extractors import get_extractor
+from src.ner.ner_extractor import NERExtractor
+from src.ner.router import route_file
 
 logger = logging.getLogger(__name__)
 

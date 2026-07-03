@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ai_pipeline.state import PipelineInput, PipelineOutput
-from ai_pipeline.workflow import HypothesisPipeline
+from src.ai_pipeline.state import PipelineInput, PipelineOutput
+from src.ai_pipeline.workflow import HypothesisPipeline
 
 
 async def run_pipeline(input_data: PipelineInput) -> PipelineOutput:

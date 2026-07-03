@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Optional
 
-from models import (
+from src.models import (
     ElementType,
     SourceType,
     TableCell,

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from ai_pipeline.graph.builder import GraphBuilder
-from ai_pipeline.state import HypothesisCard
-from models import Entity, EntityLabel, Relation, RelationType
+from src.ai_pipeline.graph.builder import GraphBuilder
+from src.ai_pipeline.state import HypothesisCard
+from src.models import Entity, EntityLabel, Relation, RelationType
 
 
 class TestGraphBuilder:

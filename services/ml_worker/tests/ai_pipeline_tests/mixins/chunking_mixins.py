@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Optional
 
-from models import (
+from src.models import (
     ElementType,
     SourceType,
     TableCell,

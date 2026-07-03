@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import uuid
 
-from config import settings
-from models import Chunk, ElementType, UnifiedDocument, UnifiedElement
+from src.config import settings
+from src.models import Chunk, ElementType, UnifiedDocument, UnifiedElement
 
 
 class HybridChunker:

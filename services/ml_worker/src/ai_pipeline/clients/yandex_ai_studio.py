@@ -4,7 +4,7 @@ import json
 from typing import Any, Optional
 
 import httpx
-from config import settings
+from src.config import settings
 
 
 class YandexAIStudioClient:

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from models import Chunk
-
-from ai_pipeline.vector_store.chroma_store import ChromaStore
+from src.ai_pipeline.vector_store.chroma_store import ChromaStore
+from src.models import Chunk
 
 
 class KnowledgeRAG:

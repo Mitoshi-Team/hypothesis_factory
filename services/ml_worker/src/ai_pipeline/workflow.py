@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-from ner import extract_document, extract_entities
+import uuid
 
-from ai_pipeline.agents.generator import GeneratorAgent
-from ai_pipeline.agents.graph_agent import GraphAgent
-from ai_pipeline.agents.relation_extractor import RelationExtractor
-from ai_pipeline.agents.reviewer import ReviewerAgent
-from ai_pipeline.chunking.hybrid_chunker import HybridChunker
-from ai_pipeline.embeddings.yandex_embedder import YandexEmbedder
-from ai_pipeline.rag.history_rag import HistoryRAG
-from ai_pipeline.rag.knowledge_rag import KnowledgeRAG
-from ai_pipeline.rag.relation_rag import RelationRAG
-from ai_pipeline.state import (
+from src.ai_pipeline.agents.generator import GeneratorAgent
+from src.ai_pipeline.agents.graph_agent import GraphAgent
+from src.ai_pipeline.agents.relation_extractor import RelationExtractor
+from src.ai_pipeline.agents.reviewer import ReviewerAgent
+from src.ai_pipeline.chunking.hybrid_chunker import HybridChunker
+from src.ai_pipeline.embeddings.yandex_embedder import YandexEmbedder
+from src.ai_pipeline.rag.history_rag import HistoryRAG
+from src.ai_pipeline.rag.knowledge_rag import KnowledgeRAG
+from src.ai_pipeline.rag.relation_rag import RelationRAG
+from src.ai_pipeline.state import (
     PipelineInput,
     PipelineOutput,
     PipelineState,
     PipelineTrace,
     RevisionRecord,
 )
-from ai_pipeline.tools.postgres_tools import PostgresTools
+from src.ai_pipeline.tools.postgres_tools import PostgresTools
+from src.models import UnifiedDocument
+from src.ner import extract_document, extract_entities
 
 
 class HypothesisPipeline:
@@ -37,6 +39,8 @@ class HypothesisPipeline:
     async def run(self, input_data: PipelineInput) -> PipelineOutput:
         state = PipelineState(
             input=input_data,
+            document=input_data.document,
+            ner_entities=input_data.entities,
             trace=PipelineTrace(
                 session_id=input_data.session_id or "",
                 iteration=input_data.iteration,
@@ -128,15 +132,42 @@ class HypothesisPipeline:
     async def _ingest_document(self, state: PipelineState) -> PipelineState:
         if state.document is not None:
             return state
-        fp = state.input.file_path
-        if not fp:
+
+        if state.input.file_paths:
+            documents = [extract_document(fp) for fp in state.input.file_paths]
+            state.document = self._merge_documents(documents)
             return state
-        state.document = extract_document(fp)
+
+        if state.input.file_path:
+            state.document = extract_document(state.input.file_path)
+            return state
+
         return state
+
+    def _merge_documents(
+        self, documents: list[UnifiedDocument]
+    ) -> UnifiedDocument:
+        if not documents:
+            raise ValueError("No documents to merge")
+        if len(documents) == 1:
+            return documents[0]
+
+        first = documents[0]
+        merged = UnifiedDocument(
+            document_id=str(uuid.uuid4()),
+            source_type=first.source_type,
+            source_uri=";".join(d.source_uri for d in documents),
+            title=first.title,
+            elements=[el for d in documents for el in d.elements],
+            extractor="merged",
+        )
+        return merged
 
     async def _extract_entities_ner(
         self, state: PipelineState
     ) -> PipelineState:
+        if state.ner_entities:
+            return state
         document = state.document or state.input.document
         if not document:
             return state

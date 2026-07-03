@@ -35,5 +35,9 @@ class Settings(BaseSettings):
     top_k_history: int = 6
     max_revision_iterations: int = 10
 
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = "redis://localhost:6379/0"
+    report_dir: str = "./reports"
+
 
 settings = Settings()

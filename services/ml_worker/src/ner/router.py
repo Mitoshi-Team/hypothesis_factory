@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from models import SourceType
+from src.models import SourceType
 
 EXTENSION_MAP: dict[str, SourceType] = {
     ".txt": SourceType.TEXT,

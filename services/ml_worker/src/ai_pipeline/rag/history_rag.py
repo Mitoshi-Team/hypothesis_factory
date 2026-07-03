@@ -3,8 +3,12 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from ai_pipeline.state import HistoryEntry, HypothesisCard, HypothesisReview
-from ai_pipeline.vector_store.chroma_store import ChromaStore
+from src.ai_pipeline.state import (
+    HistoryEntry,
+    HypothesisCard,
+    HypothesisReview,
+)
+from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
 
 class HistoryRAG:

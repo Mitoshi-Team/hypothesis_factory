@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ai_pipeline.graph.graph_schema import (
+from src.ai_pipeline.graph.graph_schema import (
     GraphEdge,
     GraphNode,
     KnowledgeGraph,

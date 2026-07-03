@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ai_pipeline.chunking.hybrid_chunker import HybridChunker
-from models import ElementType
+from src.ai_pipeline.chunking.hybrid_chunker import HybridChunker
+from src.models import ElementType
 
 
 class TestHybridChunker:

@@ -3,15 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from models import (
+from pydantic import BaseModel
+from src.ai_pipeline.graph.graph_schema import KnowledgeGraph
+from src.models import (
     Chunk,
     Entity,
     Relation,
     UnifiedDocument,
 )
-from pydantic import BaseModel
-
-from ai_pipeline.graph.graph_schema import KnowledgeGraph
 
 
 class HypothesisCard(BaseModel):
@@ -71,7 +70,9 @@ class PipelineInput(BaseModel):
     user_id: str = ""
     problem: str = ""
     file_path: Optional[str] = None
+    file_paths: list[str] = []
     document: Optional[UnifiedDocument] = None
+    entities: list[Entity] = []
     constraints: str = ""
     weights: Optional[dict[str, float]] = None
     iteration: int = 0

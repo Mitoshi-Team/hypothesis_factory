@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 import chromadb
 from chromadb.config import Settings
-from models import Chunk
+from src.models import Chunk
 
 _EPHEMERAL_CLIENT: chromadb.Client | None = None
 

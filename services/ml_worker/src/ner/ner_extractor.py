@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from models import Entity, EntityLabel, UnifiedElement
+from src.models import Entity, EntityLabel, UnifiedElement
 
 logger = logging.getLogger(__name__)
 

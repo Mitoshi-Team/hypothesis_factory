@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from config import settings
-from models import Chunk
-
-from ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
+from src.ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
+from src.config import settings
+from src.models import Chunk
 
 
 class YandexEmbedder:

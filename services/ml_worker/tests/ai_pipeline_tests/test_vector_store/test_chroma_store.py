@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from ai_pipeline.vector_store.chroma_store import ChromaStore
+from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
 
 class TestChromaStore:

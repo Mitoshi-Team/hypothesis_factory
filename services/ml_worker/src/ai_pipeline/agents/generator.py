@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from models import Chunk
-
-from ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
-from ai_pipeline.state import HypothesisCard
-from ai_pipeline.tools.postgres_tools import PostgresTools
+from src.ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
+from src.ai_pipeline.state import HypothesisCard
+from src.ai_pipeline.tools.postgres_tools import PostgresTools
+from src.models import Chunk
 
 
 class GeneratorAgent:

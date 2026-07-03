@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from ai_pipeline.rag.knowledge_rag import KnowledgeRAG
+from src.ai_pipeline.rag.knowledge_rag import KnowledgeRAG
 
 
 class TestKnowledgeRAG:

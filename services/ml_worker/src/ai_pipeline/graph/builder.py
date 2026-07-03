@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ai_pipeline.state import HypothesisCard
 
-from models import Entity, Relation
-
-from ai_pipeline.graph.graph_schema import (
+from src.ai_pipeline.graph.graph_schema import (
     GraphEdge,
     GraphNode,
     KnowledgeGraph,
     SourceRef,
 )
+from src.models import Entity, Relation
 
 
 class GraphBuilder:

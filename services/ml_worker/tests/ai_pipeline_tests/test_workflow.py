@@ -3,8 +3,12 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ai_pipeline.state import HypothesisCard, HypothesisReview, PipelineInput
-from ai_pipeline.workflow import HypothesisPipeline
+from src.ai_pipeline.state import (
+    HypothesisCard,
+    HypothesisReview,
+    PipelineInput,
+)
+from src.ai_pipeline.workflow import HypothesisPipeline
 
 
 class TestHypothesisPipeline:
@@ -108,9 +112,11 @@ class TestHypothesisPipeline:
         fake_doc.document_id = "doc_test"
 
         mocker.patch(
-            "ai_pipeline.workflow.extract_document", return_value=fake_doc
+            "src.ai_pipeline.workflow.extract_document", return_value=fake_doc
         )
-        mocker.patch("ai_pipeline.workflow.extract_entities", return_value=[])
+        mocker.patch(
+            "src.ai_pipeline.workflow.extract_entities", return_value=[]
+        )
         mocker.patch.object(
             pipeline.relation_extractor, "extract", return_value=[]
         )
@@ -209,7 +215,7 @@ class TestHypothesisPipeline:
 
 
 def pipeline_state_factory(requires_chunking: bool = False):
-    from ai_pipeline.state import PipelineState
+    from src.ai_pipeline.state import PipelineState
 
     state = PipelineState(input=PipelineInput(problem="Test problem"))
     state.requires_chunking = requires_chunking

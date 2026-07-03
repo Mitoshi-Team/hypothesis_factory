@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ai_pipeline.agents.generator import GeneratorAgent
+from src.ai_pipeline.agents.generator import GeneratorAgent
 
 
 class TestGeneratorAgent:
