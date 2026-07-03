@@ -23,6 +23,7 @@ class SourceType(str, Enum):
     EXCEL = "excel"
     DATABASE = "database"
     MARKDOWN = "markdown"
+    WORD = "word"
 
 
 class ElementType(str, Enum):

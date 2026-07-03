@@ -25,6 +25,7 @@ from ner.ner_extractor import NERExtractor, NER_LABEL_MAP, RELATION_PATTERNS
 from ner.router import EXTENSION_MAP, route_file
 from ner.extractors import (
     DBExtractor,
+    DocExtractor,
     ExcelExtractor,
     MarkdownExtractor,
     PDFExtractor,
@@ -89,6 +90,28 @@ def xlsx_file(tmp_dir: Path) -> Path:
         "Value": [1200, 800, 950],
     })
     df.to_excel(str(path), sheet_name="Materials", index=False)
+    return path
+
+
+@pytest.fixture
+def docx_file(tmp_dir: Path) -> Path:
+    from docx import Document
+
+    path = tmp_dir / "test.docx"
+    doc = Document()
+    doc.add_heading("Materials Report", level=1)
+    doc.add_paragraph("This report describes nickel alloy properties.")
+    doc.add_paragraph(
+        "Ниобий повышает жаропрочность стали.", style="List Bullet"
+    )
+    table = doc.add_table(rows=3, cols=2)
+    table.cell(0, 0).text = "Material"
+    table.cell(0, 1).text = "Value"
+    table.cell(1, 0).text = "Ниобий"
+    table.cell(1, 1).text = "1200"
+    table.cell(2, 0).text = "Хром"
+    table.cell(2, 1).text = "800"
+    doc.save(str(path))
     return path
 
 
@@ -181,6 +204,10 @@ class TestRouter:
         assert route_file("file.xlsx") == SourceType.EXCEL
         assert route_file("file.xls") == SourceType.EXCEL
 
+    def test_route_word(self):
+        assert route_file("file.docx") == SourceType.WORD
+        assert route_file("file.doc") == SourceType.WORD
+
     def test_route_database(self):
         assert route_file("file.db") == SourceType.DATABASE
         assert route_file("file.sqlite") == SourceType.DATABASE
@@ -215,6 +242,7 @@ class TestGetExtractor:
         assert isinstance(get_extractor(SourceType.PDF), PDFExtractor)
         assert isinstance(get_extractor(SourceType.EXCEL), ExcelExtractor)
         assert isinstance(get_extractor(SourceType.DATABASE), DBExtractor)
+        assert isinstance(get_extractor(SourceType.WORD), DocExtractor)
 
     def test_get_extractor_unknown_raises(self):
         with pytest.raises(ValueError):
@@ -302,6 +330,54 @@ class TestExcelExtractor:
         doc = extractor.extract(str(xlsx_file))
         td = doc.elements[0].table_data
         assert td.name == "Materials"
+
+
+class TestDocExtractor:
+    def test_extract_returns_document(self, docx_file: Path):
+        extractor = DocExtractor()
+        doc = extractor.extract(str(docx_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.WORD
+
+    def test_extract_contains_elements(self, docx_file: Path):
+        extractor = DocExtractor()
+        doc = extractor.extract(str(docx_file))
+        assert len(doc.elements) > 0
+
+    def test_extract_parses_heading(self, docx_file: Path):
+        extractor = DocExtractor()
+        doc = extractor.extract(str(docx_file))
+        titles = [el for el in doc.elements if el.type.value == "title"]
+        assert any("materials" in el.text.lower() for el in titles)
+
+    def test_extract_contains_table(self, docx_file: Path):
+        extractor = DocExtractor()
+        doc = extractor.extract(str(docx_file))
+        tables = [el for el in doc.elements if el.table_data is not None]
+        assert len(tables) > 0
+        td = tables[0].table_data
+        assert td.columns == ["Material", "Value"]
+
+    def test_extract_contains_text(self, docx_file: Path):
+        extractor = DocExtractor()
+        doc = extractor.extract(str(docx_file))
+        texts = [el.text for el in doc.elements]
+        combined = " ".join(texts)
+        assert "nickel" in combined.lower()
+
+    def test_extract_docx_with_cyrillic(self, docx_file: Path):
+        extractor = DocExtractor()
+        doc = extractor.extract(str(docx_file))
+        texts = " ".join(el.text for el in doc.elements)
+        assert "ниобий" in texts.lower()
+
+    def test_extract_doc_unsupported_fallback(self, tmp_dir: Path):
+        path = tmp_dir / "old.doc"
+        path.write_text("dummy", encoding="utf-8")
+        extractor = DocExtractor()
+        doc = extractor.extract(str(path))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.WORD
 
 
 class TestDBExtractor:

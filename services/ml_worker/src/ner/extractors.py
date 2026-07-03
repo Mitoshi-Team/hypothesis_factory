@@ -42,6 +42,8 @@ class BaseExtractor(ABC):
             ".sql": "application/sql",
             ".db": "application/octet-stream",
             ".sqlite": "application/octet-stream",
+            ".doc": "application/msword",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         }
         source_bytes = path.read_bytes()
 
@@ -458,12 +460,170 @@ class DBExtractor(BaseExtractor):
         return file_path
 
 
+class DocExtractor(BaseExtractor):
+    source_type = SourceType.WORD
+
+    def extract(self, file_path: str) -> UnifiedDocument:
+        ext = Path(file_path).suffix.lower()
+        if ext == ".doc":
+            return self._extract_doc(file_path)
+        return self._extract_docx(file_path)
+
+    def _extract_docx(self, file_path: str) -> UnifiedDocument:
+        from docx import Document as DocxDocument
+        from docx.oxml.ns import qn
+
+        doc = DocxDocument(file_path)
+        elements: list[UnifiedElement] = []
+        table_iter = iter(doc.tables)
+
+        for child in doc.element.body:
+            tag = child.tag
+            if tag.endswith("tbl"):
+                table = next(table_iter, None)
+                if table is not None:
+                    td = self._convert_docx_table(table)
+                    elements.append(
+                        UnifiedElement(
+                            type=ElementType.TABLE,
+                            text=td.markdown or "",
+                            table_data=td,
+                            extractor="python-docx",
+                            source_type=SourceType.WORD,
+                        )
+                    )
+            elif tag.endswith("p"):
+                from docx.text.paragraph import Paragraph
+
+                para = Paragraph(child, doc)
+                text = para.text.strip()
+                if not text:
+                    continue
+                style_name = para.style.name.lower() if para.style else ""
+                if "heading" in style_name or "title" in style_name:
+                    level = None
+                    for part in style_name.replace("heading", "").strip().split():
+                        if part.isdigit():
+                            level = int(part)
+                            break
+                    elements.append(
+                        UnifiedElement(
+                            type=ElementType.TITLE,
+                            text=text,
+                            level=level or 1,
+                            extractor="python-docx",
+                            source_type=SourceType.WORD,
+                        )
+                    )
+                elif style_name.startswith("list"):
+                    elements.append(
+                        UnifiedElement(
+                            type=ElementType.LIST_ITEM,
+                            text=text,
+                            extractor="python-docx",
+                            source_type=SourceType.WORD,
+                        )
+                    )
+                else:
+                    elements.append(
+                        UnifiedElement(
+                            type=ElementType.TEXT,
+                            text=text,
+                            extractor="python-docx",
+                            source_type=SourceType.WORD,
+                        )
+                    )
+
+        return self._make_document(
+            file_path=file_path,
+            elements=elements,
+            extractor="python-docx",
+        )
+
+    def _extract_doc(self, file_path: str) -> UnifiedDocument:
+        try:
+            return self._extract_with_unstructured(file_path)
+        except ImportError:
+            return self._make_document(
+                file_path=file_path,
+                elements=[],
+                extractor="builtin",
+            )
+
+    def _extract_with_unstructured(self, file_path: str) -> UnifiedDocument:
+        from unstructured.partition.doc import partition_doc
+
+        raw_elements = partition_doc(filename=file_path)
+        elements = [self._convert_unstructured_element(el) for el in raw_elements]
+        return self._make_document(
+            file_path=file_path,
+            elements=elements,
+            extractor="unstructured",
+        )
+
+    @staticmethod
+    def _convert_unstructured_element(el: Any) -> UnifiedElement:
+        category_map = {
+            "Title": ElementType.TITLE,
+            "Header": ElementType.HEADER,
+            "Footer": ElementType.FOOTER,
+            "ListItem": ElementType.LIST_ITEM,
+            "Table": ElementType.TABLE,
+            "FigureCaption": ElementType.CAPTION,
+            "Caption": ElementType.CAPTION,
+            "Formula": ElementType.FORMULA,
+            "CodeSnippet": ElementType.CODE,
+            "PageBreak": ElementType.TEXT,
+            "UncategorizedText": ElementType.TEXT,
+            "NarrativeText": ElementType.TEXT,
+        }
+        category = el.category if hasattr(el, "category") else "NarrativeText"
+        el_type = category_map.get(category, ElementType.TEXT)
+        text = el.text if hasattr(el, "text") else str(el)
+        return UnifiedElement(
+            type=el_type,
+            text=text or "",
+            extractor="unstructured",
+            source_type=SourceType.WORD,
+        )
+
+    @staticmethod
+    def _convert_docx_table(table: Any) -> TableData:
+        cells: list[TableCell] = []
+        rows_data: list[list[str | None]] = []
+        columns: list[str] = []
+
+        for row_idx, row in enumerate(table.rows):
+            row_values: list[str | None] = []
+            for col_idx, cell in enumerate(row.cells):
+                text = cell.text.strip()
+                row_values.append(text or None)
+                cells.append(
+                    TableCell(
+                        row=row_idx,
+                        col=col_idx,
+                        text=text,
+                        is_header=row_idx == 0,
+                    )
+                )
+            rows_data.append(row_values)
+            if row_idx == 0:
+                columns = [str(c) for c in row_values]
+
+        return TableData(
+            columns=columns,
+            rows=rows_data,
+            cells=cells,
+        )
+
+
 EXTRACTOR_MAP: dict[SourceType, type[BaseExtractor]] = {
     SourceType.PDF: PDFExtractor,
     SourceType.TEXT: TextExtractor,
     SourceType.MARKDOWN: MarkdownExtractor,
     SourceType.EXCEL: ExcelExtractor,
     SourceType.DATABASE: DBExtractor,
+    SourceType.WORD: DocExtractor,
 }
 
 

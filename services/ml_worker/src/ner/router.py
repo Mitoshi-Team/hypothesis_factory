@@ -11,6 +11,8 @@ EXTENSION_MAP: dict[str, SourceType] = {
     ".pdf": SourceType.PDF,
     ".xls": SourceType.EXCEL,
     ".xlsx": SourceType.EXCEL,
+    ".doc": SourceType.WORD,
+    ".docx": SourceType.WORD,
     ".csv": SourceType.DATABASE,
     ".sql": SourceType.DATABASE,
     ".db": SourceType.DATABASE,
