@@ -45,6 +45,3 @@ uploads/
 
 # Logs
 *.log
-
-# API contract
-docs/API_CONTRACT.md
