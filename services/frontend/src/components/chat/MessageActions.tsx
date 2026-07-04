@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
-import { Check, Copy, Download } from 'lucide-react'
+import { Check, Copy, Download, Network } from 'lucide-react'
 import type { HypothesisResult } from '@/types'
 import { cn } from '@/lib/cn'
 import { CRITERIA_KEYS, criteriaLabel, verdictLabel } from '@/lib/format'
 import { t } from '@/lib/lang'
 import { useI18n } from '@/lib/i18n'
 import { SaveModal } from './SaveModal'
+import { GraphModal } from '@/components/graph/GraphModal'
 
 function resultToText(r: HypothesisResult): string {
   const scores = CRITERIA_KEYS.map((k) => `${criteriaLabel(k)} ${r.scores[k].toFixed(1)}`).join(' · ')
@@ -25,10 +26,18 @@ function resultToText(r: HypothesisResult): string {
   return lines.join('\n')
 }
 
-export function MessageActions({ result }: { result: HypothesisResult }) {
+interface MessageActionsProps {
+  result: HypothesisResult
+  /** Session id — enables the graph button when this is the latest answer. */
+  sessionId?: string
+  showGraph?: boolean
+}
+
+export function MessageActions({ result, sessionId, showGraph }: MessageActionsProps) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const [graphOpen, setGraphOpen] = useState(false)
 
   const copy = async () => {
     try {
@@ -55,9 +64,18 @@ export function MessageActions({ result }: { result: HypothesisResult }) {
           <Download className="h-3.5 w-3.5" />
           {t('actions.download')}
         </ActionButton>
+        {showGraph && sessionId && (
+          <ActionButton onClick={() => setGraphOpen(true)}>
+            <Network className="h-3.5 w-3.5" />
+            {t('actions.viewGraph')}
+          </ActionButton>
+        )}
       </div>
 
       {saveOpen && <SaveModal result={result} onClose={() => setSaveOpen(false)} />}
+      {graphOpen && sessionId && (
+        <GraphModal sessionId={sessionId} onClose={() => setGraphOpen(false)} />
+      )}
     </>
   )
 }

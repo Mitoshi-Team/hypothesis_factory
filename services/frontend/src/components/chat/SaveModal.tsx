@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FileText, FileType, X } from 'lucide-react'
 import type { HypothesisResult } from '@/types'
 import { useI18n } from '@/lib/i18n'
@@ -36,9 +37,9 @@ export function SaveModal({ result, onClose }: SaveModalProps) {
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
+      className="fixed inset-0 z-[120] flex items-end justify-center p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={t('save.title')}
@@ -81,6 +82,7 @@ export function SaveModal({ result, onClose }: SaveModalProps) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
