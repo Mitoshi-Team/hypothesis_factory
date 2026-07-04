@@ -114,7 +114,7 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className={cn(user ? "border-t border-line p-3" : "px-3 py-3")}>
+      <div className="p-3">
         {user ? (
           <div className="flex animate-fade-in items-center gap-2.5 px-1">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-[11px] font-semibold uppercase text-white">
@@ -137,7 +137,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onLogin}
-            className="inline-flex animate-fade-in items-center gap-2 rounded-xl py-2.5 text-[13.5px] font-medium text-ink-soft transition-all duration-200 ease-out hover:bg-line/60 hover:text-ink active:scale-[0.98]"
+            className="flex w-full animate-fade-in items-center justify-start gap-2.5 rounded-xl px-2.5 py-2.5 text-[13.5px] font-medium text-ink-soft transition-all duration-200 ease-out hover:bg-line/60 hover:text-ink active:scale-[0.98]"
           >
             <LogIn className="h-4 w-4" strokeWidth={2.2} />
             Авторизация
