@@ -215,6 +215,8 @@ class HypothesisPipeline:
             rag_context=state.rag_context,
             history_context=state.history_context,
             feedback=state.input.feedback,
+            previous_hypothesis=state.input.previous_hypothesis,
+            previous_review=state.input.previous_review,
             chunks=state.chunks,
         )
 

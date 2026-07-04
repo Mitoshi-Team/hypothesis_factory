@@ -4,7 +4,7 @@ import json
 from typing import Optional
 
 from src.ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
-from src.ai_pipeline.state import HypothesisCard
+from src.ai_pipeline.state import HypothesisCard, HypothesisReview
 from src.ai_pipeline.tools.postgres_tools import PostgresTools
 from src.models import Chunk
 
@@ -22,6 +22,8 @@ class GeneratorAgent:
         rag_context: str,
         history_context: str,
         feedback: Optional[str] = None,
+        previous_hypothesis: Optional[HypothesisCard] = None,
+        previous_review: Optional[HypothesisReview] = None,
         chunks: Optional[list[Chunk]] = None,
     ) -> HypothesisCard:
         system_prompt = self._build_system_prompt(weights)
@@ -31,6 +33,8 @@ class GeneratorAgent:
             rag_context=rag_context,
             history_context=history_context,
             feedback=feedback,
+            previous_hypothesis=previous_hypothesis,
+            previous_review=previous_review,
         )
 
         tools = self.postgres_tools.get_tool_definitions()
@@ -92,16 +96,32 @@ class GeneratorAgent:
         rag_context: str,
         history_context: str,
         feedback: Optional[str],
+        previous_hypothesis: Optional[HypothesisCard] = None,
+        previous_review: Optional[HypothesisReview] = None,
     ) -> str:
         parts = [f"Проблема: {problem}"]
 
         if constraints:
             parts.append(f"\nОграничения: {constraints}")
 
-        if feedback:
+        if previous_hypothesis:
             parts.append(
-                f"\nФидбек на предыдущую версию (исправь это): {feedback}"
+                f"\nПредыдущая гипотеза: {previous_hypothesis.hypothesis}"
             )
+            parts.append(
+                f"\nОжидаемый эффект предыдущей версии: {previous_hypothesis.expected_effect}"
+            )
+
+        if previous_review:
+            parts.append(
+                f"\nРевью предыдущей версии: {previous_review.comments}"
+            )
+            parts.append(
+                f"\nПредложения по улучшению: {previous_review.suggestions}"
+            )
+
+        if feedback:
+            parts.append(f"\nФидбек пользователя (исправь это): {feedback}")
 
         if rag_context:
             parts.append(f"\n\nКонтекст из документов:\n{rag_context}")
