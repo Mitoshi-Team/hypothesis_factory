@@ -10,6 +10,7 @@ import { ChatThread } from '@/components/chat/ChatThread'
 import { Composer, type ComposerPayload } from '@/components/composer/Composer'
 import { AuthPage } from '@/components/auth/AuthPage'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { saveDraft, takeDraft } from '@/lib/draft'
 import {
   createSession,
@@ -29,6 +30,7 @@ export function App() {
   const location = useLocation()
   const { sessionId } = useParams()
   const { user, logout } = useAuth()
+  const { t } = useI18n()
   const authed = user !== null
 
   const isAuthRoute = location.pathname === '/auth'
@@ -334,7 +336,7 @@ export function App() {
                       type="button"
                       onClick={() => setNotice(null)}
                       className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
-                      aria-label="Скрыть ошибку"
+                      aria-label={t('app.hideError')}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>

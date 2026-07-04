@@ -2,11 +2,13 @@ import { useState, type ReactNode } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import type { HypothesisResult as Result } from '@/types'
 import { cn } from '@/lib/cn'
-import { CRITERIA_LABELS, verdictLabel } from '@/lib/format'
+import { criteriaLabel, verdictLabel } from '@/lib/format'
+import { useI18n } from '@/lib/i18n'
 
 const ORDER: Array<keyof Result['scores']> = ['novelty', 'feasibility', 'effect', 'risk']
 
 export function HypothesisResult({ result }: { result: Result }) {
+  const { t } = useI18n()
   const [sourcesOpen, setSourcesOpen] = useState(false)
 
   return (
@@ -36,19 +38,19 @@ export function HypothesisResult({ result }: { result: Result }) {
               <span className="font-mono text-lg font-semibold tabular-nums text-ink">
                 {result.scores[key].toFixed(1)}
               </span>
-              <span className="text-[11px] text-ink-faint">{CRITERIA_LABELS[key]}</span>
+              <span className="text-[11px] text-ink-faint">{criteriaLabel(key)}</span>
             </div>
           ))}
         </div>
 
         {/* Expected effect */}
-        <Field label="Ожидаемый эффект">
+        <Field label={t('result.expectedEffect')}>
           <p className="text-[14px] leading-relaxed text-ink-soft">{result.expectedEffect}</p>
         </Field>
 
         {/* Risks */}
         {result.risks.length > 0 && (
-          <Field label="Риски">
+          <Field label={t('result.risks')}>
             <ul className="flex flex-col gap-1.5">
               {result.risks.map((r, i) => (
                 <li key={i} className="flex gap-2 text-[14px] text-ink-soft">
@@ -62,7 +64,7 @@ export function HypothesisResult({ result }: { result: Result }) {
 
         {/* Suggestions */}
         {result.suggestions.length > 0 && (
-          <Field label="Что проверить дальше">
+          <Field label={t('result.nextChecks')}>
             <ul className="flex flex-col gap-1.5">
               {result.suggestions.map((s, i) => (
                 <li key={i} className="flex gap-2 text-[14px] text-ink-soft">
@@ -84,7 +86,7 @@ export function HypothesisResult({ result }: { result: Result }) {
             aria-expanded={sourcesOpen}
             className="flex w-full items-center justify-between px-4 py-2.5 text-[13px] text-ink-soft transition-colors hover:bg-panel sm:px-5"
           >
-            <span>Источники · {result.evidenceSources.length}</span>
+            <span>{t('result.sources')} · {result.evidenceSources.length}</span>
             <ChevronDown
               className={cn('h-4 w-4 text-ink-faint transition-transform', sourcesOpen && 'rotate-180')}
             />
