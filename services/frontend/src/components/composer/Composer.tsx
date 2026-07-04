@@ -89,7 +89,7 @@ export function Composer({ busy, threadKey, prefill, initialWeights, onSend }: P
           rows={1}
           placeholder="Опишите технологическую проблему…"
           aria-label="Технологическая проблема"
-          className="max-h-[200px] min-h-[40px] flex-1 resize-none self-center bg-transparent py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none scroll-slim"
+          className="max-h-[200px] min-h-[40px] flex-1 resize-none self-center bg-transparent py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 scroll-slim"
         />
         <div className="flex items-center gap-1 pb-0.5">
           <button

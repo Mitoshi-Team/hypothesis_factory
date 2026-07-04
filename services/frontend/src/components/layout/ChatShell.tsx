@@ -60,9 +60,6 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
         <div className="shrink-0 px-3 pb-4 pt-1 md:px-6 md:pb-6">
           <div className="mx-auto w-full max-w-3xl">
             {composer}
-            <p className="mt-2 text-center text-[11px] text-ink-faint">
-              Гипотезы носят рекомендательный характер и требуют лабораторной проверки.
-            </p>
           </div>
         </div>
       </div>
