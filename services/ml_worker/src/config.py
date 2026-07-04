@@ -56,7 +56,14 @@ class Settings(BaseSettings):
 
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/0"
-    report_dir: str = "./reports"
+    upload_dir: str = Field(
+        default="/app/uploads",
+        alias="UPLOAD_DIR",
+    )
+    report_dir: str = Field(
+        default="/app/reports",
+        alias="REPORT_DIR",
+    )
 
     ner_model_name: str = "urchade/gliner_multi-v2.1"
     hf_token: str = ""

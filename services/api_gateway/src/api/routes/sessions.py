@@ -21,6 +21,7 @@ from src.api.schemas import (
     SessionDetailResponse,
     SessionListResponse,
     SessionResponse,
+    TraceResult,
 )
 from src.config import get_settings
 from src.database.models import File as FileORM
@@ -163,6 +164,9 @@ async def get_session_details(
             graph_data = (
                 json.loads(latest_orm.graph_json) if latest_orm.graph_json else None
             )
+            trace_data = (
+                json.loads(latest_orm.trace_json) if latest_orm.trace_json else None
+            )
 
             latest_result = ResultResponse(
                 message_id=latest_orm.message_id,
@@ -174,6 +178,7 @@ async def get_session_details(
                 if review_data
                 else None,
                 graph=GraphResponse.model_validate(graph_data) if graph_data else None,
+                trace=TraceResult.model_validate(trace_data) if trace_data else None,
             )
         except Exception:
             # Fallback if validation fails
@@ -258,10 +263,12 @@ async def submit_message(
     if not session:
         raise EntityNotFoundError("Session not found")
 
-    # Determine iteration number (number of existing system messages)
+    # Determine iteration number (number of successfully processed system messages)
     count_result = await db.execute(
         select(func.count(MessageORM.id)).where(
-            MessageORM.session_id == session_id, MessageORM.role == "system"
+            MessageORM.session_id == session_id,
+            MessageORM.role == "system",
+            MessageORM.status == "done",
         )
     )
     iteration = count_result.scalar() or 0

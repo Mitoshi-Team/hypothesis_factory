@@ -14,6 +14,7 @@ from src.api.schemas import (
     HypothesisCard,
     HypothesisReview,
     ResultResponse,
+    TraceResult,
 )
 from src.config import get_settings
 from src.database.models import Message as MessageORM
@@ -72,7 +73,9 @@ async def get_message_results(
             graph=GraphResponse.model_validate(json.loads(result_orm.graph_json))
             if result_orm.graph_json
             else None,
-            trace=None,  # Trace is optional/metadata
+            trace=TraceResult.model_validate(json.loads(result_orm.trace_json))
+            if result_orm.trace_json
+            else None,
         )
 
     # If result is not found, check the message status

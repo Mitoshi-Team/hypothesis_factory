@@ -364,6 +364,15 @@ def test_get_results_ready_returns_data(client: TestClient, mock_db: AsyncMock) 
             }
         ),
         graph_json=json.dumps({"nodes": [], "edges": []}),
+        trace_json=json.dumps(
+            {
+                "session_id": "sess_001",
+                "iteration": 0,
+                "chunks_used": [],
+                "tables_queried": [],
+                "history_cases_used": [],
+            }
+        ),
     )
 
     mock_result = MagicMock()

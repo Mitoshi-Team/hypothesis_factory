@@ -106,6 +106,7 @@ API Gateway и ml_worker используют общую PostgreSQL. Ниже м
 | `hypothesis_json` | text | JSON гипотезы |
 | `review_json` | text | JSON ревью |
 | `graph_json` | text | JSON графа |
+| `trace_json` | text | JSON трассировки pipeline |
 | `created_at` | datetime | Время создания |
 
 ## Коды ошибок
