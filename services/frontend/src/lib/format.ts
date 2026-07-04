@@ -1,37 +1,18 @@
-const RISK_LABELS: Record<string, string> = {
-  technical: 'Технический',
-  economic: 'Экономический',
-  regulatory: 'Нормативный',
+import type { Verdict } from '@/types'
+
+export const CRITERIA_LABELS: Record<string, string> = {
+  novelty: 'Новизна',
+  feasibility: 'Реализуемость',
+  effect: 'Эффект',
+  risk: 'Риск',
 }
 
-const RISK_LEVELS: Record<string, string> = {
-  low: 'низкий',
-  medium: 'средний',
-  high: 'высокий',
-}
-
-const SOURCE_LABELS: Record<string, string> = {
-  article: 'Статья',
-  patent: 'Патент',
-  report: 'Отчёт',
-  dataset: 'Датасет',
-}
-
-export function riskCategoryLabel(category: string): string {
-  return RISK_LABELS[category] ?? category
-}
-
-export function riskLevelLabel(level: string): string {
-  return RISK_LEVELS[level] ?? level
-}
-
-export function sourceKindLabel(kind: string): string {
-  return SOURCE_LABELS[kind] ?? kind
+export function verdictLabel(v: Verdict): string {
+  return v === 'accept' ? 'Принята' : 'Отклонена'
 }
 
 export function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleString('ru-RU', {
+  return new Date(iso).toLocaleString('ru-RU', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -40,11 +21,23 @@ export function formatDate(iso: string): string {
   })
 }
 
-export function reportFileName(problem: string, ext: string): string {
-  const base = problem
+/** Compact date for the sidebar: "сегодня", "вчера", or "3 июл". */
+export function relativeDay(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diff = Math.round((startOf(now) - startOf(d)) / 86_400_000)
+  if (diff <= 0) return 'сегодня'
+  if (diff === 1) return 'вчера'
+  if (diff < 7) return `${diff} дн назад`
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+}
+
+export function reportFileName(title: string, ext: string): string {
+  const base = title
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 50)
-  return `hypotheses-${base || 'report'}.${ext}`
+  return `hypothesis-${base || 'result'}.${ext}`
 }
