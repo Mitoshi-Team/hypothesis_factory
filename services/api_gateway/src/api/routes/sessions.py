@@ -309,10 +309,9 @@ async def submit_message(
         os.makedirs(session_upload_dir, exist_ok=True)
 
         for file in files:
-            # Check file size limit
-            await file.seek(0, 2)
-            file_size = await file.tell()
-            await file.seek(0)
+            # Read file content and check size limit
+            file_content = await file.read()
+            file_size = len(file_content)
 
             if file_size > MAX_FILE_SIZE:
                 raise ValidationAppError(
@@ -327,7 +326,7 @@ async def submit_message(
 
             # Save file content
             with open(file_path, "wb") as f_out:
-                f_out.write(await file.read())
+                f_out.write(file_content)
 
             # Save File details to DB
             file_record = FileORM(
