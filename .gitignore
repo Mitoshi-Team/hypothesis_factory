@@ -23,6 +23,13 @@ venv.bak/
 dist/
 build/
 
+# Testing / Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.hypothesis/
+
 # IDEs
 .vscode/
 .idea/

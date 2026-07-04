@@ -43,13 +43,27 @@ uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
 - `src/main.py` — точка входа FastAPI.
 - `src/config.py` — настройки.
-- `src/api/router.py` — маршруты API.
-- `src/api/schemas.py` — Pydantic-схемы.
-- `src/api/dependencies.py` — зависимости FastAPI.
-- `src/utils/exceptions.py` — кастомные исключения.
+- `src/api/router.py` — главный роутер.
+- `src/api/routes/` — разделенные маршруты API (auth, admin, sessions, results, tasks).
+- `src/api/schemas.py` — Pydantic-схемы запросов и ответов.
+- `src/api/dependencies.py` — зависимости FastAPI (БД, аутентификация, проверка прав).
+- `src/database/session.py` — асинхронные сессии базы данных.
+- `src/utils/auth.py` — хелперы для генерации и проверки JWT-токенов.
+- `src/utils/celery_client.py` — клиент Celery для отправки задач.
+- `src/utils/exceptions.py` — кастомные исключения и ошибки приложения.
 - `src/utils/log_config.py` — логирование.
+- `scripts/create_admin.py` — скрипт сидинга администратора.
 - `Dockerfile` — образ сервиса.
 - `tests/` — unit и integration тесты.
+
+## Инициализация базы данных
+
+Для создания первого администратора выполните скрипт инициализации:
+
+```bash
+cd services/api_gateway
+uv run python -m scripts.create_admin --username admin --password admin-password
+```
 
 ## Тесты
 
