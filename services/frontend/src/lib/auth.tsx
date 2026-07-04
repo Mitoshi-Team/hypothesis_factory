@@ -13,11 +13,13 @@ import {
   login as apiLogin,
   logout as apiLogout,
   onAuthExpired,
+  register as apiRegister,
 } from '@/lib/api'
 
 interface AuthContextValue {
   user: User | null
   login: (username: string, password: string) => Promise<void>
+  register: (username: string, password: string) => Promise<void>
   logout: () => void
 }
 
@@ -35,12 +37,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u)
   }, [])
 
+  const register = useCallback(async (username: string, password: string) => {
+    const u = await apiRegister(username.trim(), password)
+    setUser(u)
+  }, [])
+
   const logout = useCallback(() => {
     apiLogout()
     setUser(null)
   }, [])
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout])
+  const value = useMemo(
+    () => ({ user, login, register, logout }),
+    [user, login, register, logout],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
