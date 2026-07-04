@@ -6,7 +6,7 @@
 // api.ts owns the localStorage sentinel and routes each call here when it's set;
 // this module only builds the mock domain objects.
 
-import type { HypothesisResult, Session, Weights } from '@/types'
+import type { HypothesisResult, KnowledgeGraph, Session, Weights } from '@/types'
 
 export const DEMO_USERNAME = 'demo'
 export const DEMO_PASSWORD = 'demo'
