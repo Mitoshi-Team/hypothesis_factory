@@ -1,5 +1,6 @@
 """Sessions and Messages API routes."""
 
+import datetime
 import json
 import os
 import uuid
@@ -51,7 +52,6 @@ async def create_session(
 ) -> SessionResponse:
     """Initialize a new research session with KPI weights and constraints."""
     session_id = f"sess_{uuid.uuid4().hex[:12]}"
-    import datetime
 
     new_session = SessionORM(
         id=session_id,
@@ -276,7 +276,6 @@ async def submit_message(
 
     # 1. Create User Message ORM record
     user_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-    import datetime
 
     user_message = MessageORM(
         id=user_msg_id,
@@ -340,7 +339,15 @@ async def submit_message(
             db.add(file_record)
             saved_file_paths.append(file_path)
 
-    # Trigger Celery Task
+    # Assign task id and mark session processing before commit
+    celery_task_id = f"task_{uuid.uuid4().hex[:12]}"
+    system_message.task_id = celery_task_id
+    session.status = "processing"
+
+    # Commit everything before enqueuing Celery task so worker sees the records
+    await db.commit()
+
+    # Trigger Celery Task after commit to avoid race condition
     celery_task = send_process_message_task(
         user_id=current_user.id,
         session_id=session_id,
@@ -348,13 +355,8 @@ async def submit_message(
         first_message=first_message,
         upload_files=saved_file_paths,
         prompt=content,
+        task_id=celery_task_id,
     )
-
-    # Link Celery task ID to the system message
-    system_message.task_id = celery_task.id
-    session.status = "processing"
-
-    await db.commit()
 
     return MessageCreateResponse(
         message_id=system_msg_id,

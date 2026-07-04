@@ -12,19 +12,29 @@ class ReviewerAgent:
 
     async def review(self, hypothesis: HypothesisCard) -> HypothesisReview:
         system_prompt = (
-            "Ты — ревьюер технологических гипотез для Норникеля.\n"
-            "Оцени гипотезу по 4 критериям (1-10) и дай вердикт:\n"
+            "Ты — ревьюер технологических гипотез для обогатительных фабрик.\n"
+            "Оцени гипотезу по критериям (1-10) и дай вердикт:\n"
             "- Новизна: насколько идея нова\n"
             "- Реализуемость: насколько реалистична\n"
             "- Эффект: потенциальный эффект\n"
-            "- Риски: уровень рисков\n\n"
+            "- Риски: уровень рисков\n"
+            "- physical_correctness: физическая и технологическая "
+            "корректность (плотности, крупность, применимость оборудования)\n"
+            "- prompt_alignment: насколько ответ соответствует запросу "
+            "(например, флотация → только флотация)\n"
+            "- metric_realism: реалистичность цифр эффекта и масштабов\n\n"
             "Вердикты: accept / revise / reject.\n\n"
+            "accept допустим только если physical_correctness, "
+            "prompt_alignment и metric_realism >= 6.\n\n"
             "Ответь строго в формате JSON:\n"
             "{\n"
             '  "scores": {"novelty": 0-10, "feasibility": 0-10,'
-            ' "effect": 0-10, "risk": 0-10},\n'
+            ' "effect": 0-10, "risk": 0-10, "physical_correctness": 0-10,'
+            ' "prompt_alignment": 0-10, "metric_realism": 0-10},\n'
             '  "comments": {"novelty": "...", "feasibility": "...",'
-            ' "effect": "...", "risk": "...", "general": "..."},\n'
+            ' "effect": "...", "risk": "...", "physical_correctness": "...",'
+            ' "prompt_alignment": "...", "metric_realism": "...",'
+            ' "general": "..."},\n'
             '  "verdict": "accept|revise|reject",\n'
             '  "suggestions": ["совет 1", "совет 2"]\n'
             "}"
@@ -39,8 +49,15 @@ class ReviewerAgent:
             f"Реализуемость: {hypothesis.feasibility_score}, "
             f"Эффект: {hypothesis.effect_score}, "
             f"Риски: {hypothesis.risk_score}\n\n"
-            "Оцени гипотезу."
         )
+        if hypothesis.needs_expert_review:
+            user_prompt += (
+                "ВНИМАНИЕ: гипотеза не прошла автоматическую валидацию. "
+                "Нарушения:\n"
+                + "\n".join(f"- {v}" for v in hypothesis.validation_violations)
+                + "\n\n"
+            )
+        user_prompt += "Оцени гипотезу."
 
         text = self.client.complete(
             prompt=user_prompt,
@@ -51,6 +68,15 @@ class ReviewerAgent:
         review.hypothesis_id = hypothesis.title
         return review
 
+    def _enforce_verdict(self, review: HypothesisReview) -> None:
+        critical_scores = [
+            review.scores.get("physical_correctness", 0),
+            review.scores.get("prompt_alignment", 0),
+            review.scores.get("metric_realism", 0),
+        ]
+        if any(s < 6 for s in critical_scores):
+            review.verdict = "revise"
+
     def _parse_review(self, text: str) -> HypothesisReview:
         json_start = text.find("{")
         json_end = text.rfind("}")
@@ -58,12 +84,14 @@ class ReviewerAgent:
             json_str = text[json_start : json_end + 1]
             try:
                 data = json.loads(json_str)
-                return HypothesisReview(
+                review = HypothesisReview(
                     scores=data.get("scores", {}),
                     comments=data.get("comments", {}),
                     verdict=data.get("verdict", "revise"),
                     suggestions=data.get("suggestions", []),
                 )
+                self._enforce_verdict(review)
+                return review
             except (json.JSONDecodeError, ValueError):
                 pass
 

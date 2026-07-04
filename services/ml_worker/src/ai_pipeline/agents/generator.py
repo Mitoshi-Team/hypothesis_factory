@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Optional
 
 from src.ai_pipeline.clients.yandex_ai_studio import YandexAIStudioClient
 from src.ai_pipeline.state import HypothesisCard, HypothesisReview
 from src.ai_pipeline.tools.postgres_tools import PostgresTools
 from src.models import Chunk
+
+_FEW_SHOT_PATH = Path(__file__).parents[4] / "docs" / "few_shot_examples.md"
+
+
+def _load_few_shot_examples() -> str:
+    if _FEW_SHOT_PATH.exists():
+        return _FEW_SHOT_PATH.read_text(encoding="utf-8")
+    return ""
 
 
 class GeneratorAgent:
@@ -25,6 +34,7 @@ class GeneratorAgent:
         previous_hypothesis: Optional[HypothesisCard] = None,
         previous_review: Optional[HypothesisReview] = None,
         chunks: Optional[list[Chunk]] = None,
+        validation_feedback: Optional[str] = None,
     ) -> HypothesisCard:
         system_prompt = self._build_system_prompt(weights)
         user_prompt = self._build_user_prompt(
@@ -35,6 +45,7 @@ class GeneratorAgent:
             feedback=feedback,
             previous_hypothesis=previous_hypothesis,
             previous_review=previous_review,
+            validation_feedback=validation_feedback,
         )
 
         tools = self.postgres_tools.get_tool_definitions()
@@ -66,7 +77,7 @@ class GeneratorAgent:
     ) -> str:
         w = weights or {}
         lines = [
-            "Ты — генератор технологических гипотез для Норникеля.",
+            "Ты — генератор технологических гипотез для обогатительных фабрик.",
             "На основе документов, таблиц и исторических примеров",
             "сгенерируй технологическую гипотезу.\n",
             "Критерии оценки (веса):",
@@ -74,19 +85,51 @@ class GeneratorAgent:
             f"- Реализуемость (вес {w.get('feasibility', 1.0):.1f})",
             f"- Эффект (вес {w.get('effect', 1.0):.1f})",
             f"- Риски (вес {w.get('risk', 1.0):.1f})\n",
-            "Используй Postgres для дополнительных данных.",
-            "Ответь JSON:",
-            "{",
-            '  "title": "Название гипотезы",',
-            '  "hypothesis": "Описание гипотезы",',
-            '  "expected_effect": "Ожидаемый эффект",',
-            '  "risks": ["риск 1", "риск 2"],',
-            '  "feasibility_score": 0-10,',
-            '  "novelty_score": 0-10,',
-            '  "effect_score": 0-10,',
-            '  "risk_score": 0-10',
-            "}",
+            "ЖЁСТКИЕ ПРАВИЛА:",
+            "1. Если запрос касается флотации, предлагай ТОЛЬКО изменения в",
+            "   флотационной схеме, реагентном режиме, pH, аэрации, типе",
+            "   флотомашин, количестве и последовательности стадий.",
+            "2. Для сульфидных медно-никелевых руд запрещено предлагать:",
+            "   - гравитационное обогащение (гравитация, отсадка, Knelson, Falcon);",
+            "   - золоторудные шаблоны (золото, цианирование, уголь);",
+            "   - использование гидроциклонов для концентрирования.",
+            "3. Гидроциклон — аппарат для классификации по крупности, а не для",
+            "   гравитационного доизвлечения.",
+            "4. Полутораплотные (вкраплённые) частицы требуют доизмельчения или",
+            "   изменения флотационных режимов, а не гравитации.",
+            "5. Приведённые цифры эффекта должны быть реалистичными:",
+            "   для действующей обогатительной фабрики без пилотных данных",
+            "   прирост извлечения не должен превышать 0.5–1.5 абсолютных процентов.",
+            "   Любые KPI выше требуют ссылки на конкретные испытания.",
+            "6. Не приписывай предприятию типовые отраслевые мощности.",
+            "   Используй только данные из предоставленных документов.\n",
         ]
+        few_shot = _load_few_shot_examples()
+        if few_shot:
+            lines.extend(
+                [
+                    "ПРИМЕРЫ ДЛЯ ОБУЧЕНИЯ (few-shot):",
+                    few_shot,
+                    "\nИспользуй Postgres для дополнительных данных.",
+                ]
+            )
+        else:
+            lines.append("Используй Postgres для дополнительных данных.")
+        lines.extend(
+            [
+                "Ответь JSON:",
+                "{",
+                '  "title": "Название гипотезы",',
+                '  "hypothesis": "Описание гипотезы",',
+                '  "expected_effect": "Ожидаемый эффект",',
+                '  "risks": ["риск 1", "риск 2"],',
+                '  "feasibility_score": 0-10,',
+                '  "novelty_score": 0-10,',
+                '  "effect_score": 0-10,',
+                '  "risk_score": 0-10',
+                "}",
+            ]
+        )
         return "\n".join(lines)
 
     def _build_user_prompt(
@@ -98,6 +141,7 @@ class GeneratorAgent:
         feedback: Optional[str],
         previous_hypothesis: Optional[HypothesisCard] = None,
         previous_review: Optional[HypothesisReview] = None,
+        validation_feedback: Optional[str] = None,
     ) -> str:
         parts = [f"Проблема: {problem}"]
 
@@ -122,6 +166,11 @@ class GeneratorAgent:
 
         if feedback:
             parts.append(f"\nФидбек пользователя (исправь это): {feedback}")
+
+        if validation_feedback:
+            parts.append(
+                f"\nЗамечания валидатора (исправь обязательно): {validation_feedback}"
+            )
 
         if rag_context:
             parts.append(f"\n\nКонтекст из документов:\n{rag_context}")

@@ -52,6 +52,27 @@ class TestGeneratorAgent:
         )
         assert len(prompt) > 0
 
+    def test_build_system_prompt_has_domain_rules(self):
+        agent = GeneratorAgent()
+        prompt = agent._build_system_prompt(None)
+        assert "гравитационное обогащение" in prompt
+        assert "гидроциклон" in prompt
+        assert "золоторудные" in prompt
+        assert "0.5–1.5" in prompt
+
+    def test_build_user_prompt_with_validation_feedback(self):
+        agent = GeneratorAgent()
+        prompt = agent._build_user_prompt(
+            problem="Test problem",
+            constraints="",
+            rag_context="",
+            history_context="",
+            feedback=None,
+            validation_feedback="Fix gravity misuse",
+        )
+        assert "Fix gravity misuse" in prompt
+        assert "Замечания валидатора" in prompt
+
     def test_parse_hypothesis_valid_json(self):
         agent = GeneratorAgent()
         text = (

@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import Optional
 
 from src.ai_pipeline.agents.generator import GeneratorAgent
 from src.ai_pipeline.agents.graph_agent import GraphAgent
 from src.ai_pipeline.agents.relation_extractor import RelationExtractor
 from src.ai_pipeline.agents.reviewer import ReviewerAgent
+from src.ai_pipeline.agents.validator import ValidatorAgent
 from src.ai_pipeline.chunking.hybrid_chunker import HybridChunker
 from src.ai_pipeline.embeddings.yandex_embedder import YandexEmbedder
+from src.ai_pipeline.graph.graph_schema import KnowledgeGraph
 from src.ai_pipeline.rag.history_rag import HistoryRAG
 from src.ai_pipeline.rag.knowledge_rag import KnowledgeRAG
 from src.ai_pipeline.rag.relation_rag import RelationRAG
@@ -27,14 +30,22 @@ logger = logging.getLogger(__name__)
 
 
 class HypothesisPipeline:
-    def __init__(self) -> None:
+    def __init__(self, session_id: str = "") -> None:
+        self.session_id = session_id
         self.chunker = HybridChunker()
         self.embedder = YandexEmbedder()
-        self.knowledge_rag = KnowledgeRAG(embedder=self.embedder)
-        self.history_rag = HistoryRAG(embedder=self.embedder)
-        self.relation_rag = RelationRAG(embedder=self.embedder)
+        self.knowledge_rag = KnowledgeRAG(
+            embedder=self.embedder, session_id=session_id
+        )
+        self.history_rag = HistoryRAG(
+            embedder=self.embedder, session_id=session_id
+        )
+        self.relation_rag = RelationRAG(
+            embedder=self.embedder, session_id=session_id
+        )
         self.generator = GeneratorAgent()
         self.reviewer = ReviewerAgent()
+        self.validator = ValidatorAgent()
         self.relation_extractor = RelationExtractor()
         self.graph_agent = GraphAgent()
         self.postgres_tools = PostgresTools()
@@ -74,7 +85,7 @@ class HypothesisPipeline:
         state = await self._index_relations(state)
         state = await self._retrieve_knowledge(state)
         state = await self._retrieve_history(state)
-        state = await self._generate_hypothesis(state)
+        state = await self._generate_and_validate_hypothesis(state)
         state = self._build_graph(state)
         state = await self._review_hypothesis(state)
         state = self._build_output(state)
@@ -96,7 +107,7 @@ class HypothesisPipeline:
         from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
         store = ChromaStore(embedder=self.embedder)
-        store.populate_knowledge(chunks)
+        store.populate_knowledge(chunks, session_id=self.session_id)
 
         return state
 
@@ -220,8 +231,52 @@ class HypothesisPipeline:
         )
         return state
 
-    async def _generate_hypothesis(
+    async def _generate_and_validate_hypothesis(
         self, state: PipelineState
+    ) -> PipelineState:
+        max_attempts = 2
+        validation_feedback: Optional[str] = None
+
+        for attempt in range(max_attempts + 1):
+            state = await self._generate_hypothesis(
+                state, validation_feedback=validation_feedback
+            )
+            if state.hypothesis is None:
+                return state
+
+            validation = self.validator.validate(
+                hypothesis=state.hypothesis,
+                problem=state.input.problem,
+                constraints=state.input.constraints,
+            )
+            state.validation = validation
+            state.validation_attempts = attempt + 1
+
+            if validation.is_valid:
+                break
+
+            state.trace.revision_history.append(
+                RevisionRecord(
+                    iteration=state.input.iteration,
+                    hypothesis=state.hypothesis,
+                    feedback=validation_feedback,
+                )
+            )
+
+            if attempt < max_attempts:
+                validation_feedback = "\n".join(
+                    [f"- {v}" for v in validation.violations]
+                    + ["Исправь эти замечания и сгенерируй новую гипотезу."]
+                )
+            else:
+                state.hypothesis.needs_expert_review = True
+                state.hypothesis.validation_violations = validation.violations
+                break
+
+        return state
+
+    async def _generate_hypothesis(
+        self, state: PipelineState, validation_feedback: Optional[str] = None
     ) -> PipelineState:
         hypothesis = await self.generator.generate(
             problem=state.input.problem,
@@ -233,6 +288,7 @@ class HypothesisPipeline:
             previous_hypothesis=state.input.previous_hypothesis,
             previous_review=state.input.previous_review,
             chunks=state.chunks,
+            validation_feedback=validation_feedback,
         )
 
         for chunk_id in hypothesis.source_chunks:
@@ -255,6 +311,7 @@ class HypothesisPipeline:
     def _build_graph(self, state: PipelineState) -> PipelineState:
         entities = state.ner_entities or state.entities
         if not entities:
+            state.graph = KnowledgeGraph()
             return state
 
         doc_id = ""

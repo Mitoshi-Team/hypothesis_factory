@@ -52,7 +52,11 @@ class ChromaStore:
             )
         return self._history_collection
 
-    def populate_knowledge(self, chunks: list[Chunk]) -> None:
+    def populate_knowledge(
+        self,
+        chunks: list[Chunk],
+        session_id: str = "",
+    ) -> None:
         collection = self._get_knowledge_collection()
         if not chunks:
             return
@@ -71,6 +75,7 @@ class ChromaStore:
             meta = dict(chunk.metadata)
             meta["type"] = "chunk"
             meta["document_id"] = chunk.document_id
+            meta["session_id"] = session_id
             meta["element_ids"] = ",".join(chunk.element_ids)
             metadatas.append(meta)
 
@@ -87,11 +92,24 @@ class ChromaStore:
         query_text: str,
         n_results: int = 0,
         where: Optional[dict[str, Any]] = None,
+        session_id: str = "",
     ) -> list[Chunk]:
         collection = self._get_knowledge_collection()
         n = n_results or settings.top_k_rag
 
-        kwargs: dict[str, Any] = {"n_results": n, "where": where}
+        conditions: list[dict[str, Any]] = [{"type": "chunk"}]
+        if session_id:
+            conditions.append({"session_id": session_id})
+        if where:
+            conditions.append(where)
+
+        base_where: dict[str, Any]
+        if len(conditions) == 1:
+            base_where = conditions[0]
+        else:
+            base_where = {"$and": conditions}
+
+        kwargs: dict[str, Any] = {"n_results": n, "where": base_where}
         if self._embedder is not None and query_text:
             kwargs["query_embeddings"] = [self._embed_query(query_text)]
         else:

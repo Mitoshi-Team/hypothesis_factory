@@ -7,8 +7,11 @@ from src.models import Chunk
 
 
 class KnowledgeRAG:
-    def __init__(self, embedder: Any | None = None) -> None:
+    def __init__(
+        self, embedder: Any | None = None, session_id: str = ""
+    ) -> None:
         self.store = ChromaStore(embedder=embedder)
+        self.session_id = session_id
 
     def retrieve(
         self,
@@ -19,6 +22,7 @@ class KnowledgeRAG:
             query_text=query,
             n_results=n_results,
             where={"type": "chunk"},
+            session_id=self.session_id,
         )
 
         context = self._format_context(chunks)
