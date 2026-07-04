@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 from src.ai_pipeline.agents.graph_agent import GraphAgent
-from src.models import Entity, EntityLabel, Relation, RelationType
+from src.models import (
+    ElementType,
+    Entity,
+    EntityLabel,
+    Relation,
+    RelationType,
+    UnifiedDocument,
+    UnifiedElement,
+)
 
 
 class TestGraphAgent:
@@ -160,6 +168,36 @@ class TestGraphAgent:
             chunk_ids=["c2"],
         )
 
-        graph = agent._build_nodes([a1, a2])
+        graph = agent._build_nodes([a1, a2], {}, None)
         assert len(graph) == 1
         assert len(graph[0].source_chunks) == 2
+
+    def test_build_nodes_fill_source_text(self):
+        agent = GraphAgent()
+        element = UnifiedElement(
+            element_id="el_1",
+            type=ElementType.TEXT,
+            text="Nickel improves strength",
+            metadata={"section_path": "Introduction"},
+        )
+        document = UnifiedDocument(
+            source_type="text",
+            source_uri="/app/uploads/test.txt",
+            title="Test Document",
+            elements=[element],
+        )
+        entity = Entity(
+            entity_id="e1",
+            name="Nickel",
+            label=EntityLabel.MATERIAL,
+            chunk_ids=["el_1"],
+        )
+
+        graph = agent.build([entity], [], document=document)
+        assert len(graph.nodes) == 1
+        ref = graph.nodes[0].source_chunks[0]
+        assert ref.chunk_id == "el_1"
+        assert ref.element_id == "el_1"
+        assert ref.text == "Nickel improves strength"
+        assert ref.document_title == "Test Document"
+        assert ref.section_path == "Introduction"

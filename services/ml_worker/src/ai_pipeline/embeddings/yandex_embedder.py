@@ -31,9 +31,8 @@ class YandexEmbedder:
 
         all_embeddings: list[list[float]] = []
 
-        for i in range(0, len(texts), self.batch_size):
-            batch = texts[i : i + self.batch_size]
-            batch_embeddings = self.client.embed(batch)
-            all_embeddings.extend(batch_embeddings)
+        for text in texts:
+            embedding = self.client.embed([text])
+            all_embeddings.append(embedding[0])
 
         return all_embeddings
