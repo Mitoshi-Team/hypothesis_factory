@@ -27,9 +27,9 @@ class HypothesisPipeline:
     def __init__(self) -> None:
         self.chunker = HybridChunker()
         self.embedder = YandexEmbedder()
-        self.knowledge_rag = KnowledgeRAG()
-        self.history_rag = HistoryRAG()
-        self.relation_rag = RelationRAG()
+        self.knowledge_rag = KnowledgeRAG(embedder=self.embedder)
+        self.history_rag = HistoryRAG(embedder=self.embedder)
+        self.relation_rag = RelationRAG(embedder=self.embedder)
         self.generator = GeneratorAgent()
         self.reviewer = ReviewerAgent()
         self.relation_extractor = RelationExtractor()
@@ -90,9 +90,9 @@ class HypothesisPipeline:
         chunks = self.embedder.embed(chunks)
         state.chunks = chunks
 
-        from ai_pipeline.vector_store.chroma_store import ChromaStore
+        from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
-        store = ChromaStore()
+        store = ChromaStore(embedder=self.embedder)
         store.populate_knowledge(chunks)
 
         return state

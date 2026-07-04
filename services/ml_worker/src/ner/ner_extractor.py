@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from src.config import settings
 from src.models import Entity, EntityLabel, UnifiedElement
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_NER_MODEL = "knowledgator/gliner-multilingual-v2.1"
+DEFAULT_NER_MODEL = settings.ner_model_name
 
 NER_LABELS = ["MATERIAL", "PROCESS", "PROPERTY", "PARAMETER"]
 
@@ -42,6 +43,10 @@ class NERExtractor:
         if self._model is not None:
             return self._model
         from gliner import GLiNER
+        from huggingface_hub import login as hf_login
+
+        if settings.hf_token:
+            hf_login(settings.hf_token)
 
         logger.info(
             "Loading GLiNER model: %s (device=%s)",

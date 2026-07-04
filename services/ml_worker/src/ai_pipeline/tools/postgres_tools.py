@@ -116,7 +116,7 @@ class PostgresTools:
                 return f"SQL error: {e}"
 
     def get_tool_definitions(self) -> list[dict[str, Any]]:
-        return [
+        tools = [
             {
                 "name": "list_tables",
                 "description": "List all tables in the public schema",
@@ -184,6 +184,7 @@ class PostgresTools:
                 },
             },
         ]
+        return [{"type": "function", "function": tool} for tool in tools]
 
     async def get_tool_handlers(self) -> dict[str, callable]:
         return {

@@ -18,7 +18,7 @@
 
 ## Быстрый старт
 
-1. Скопируйте `.env.example` в `.env` и заполните переменные:
+1. Скопируйте `.env.example` в `.env` и заполните переменные.
 
 ```bash
 cp .env.example .env
@@ -30,7 +30,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-3. API Gateway будет доступен по адресу `http://localhost:8000`, ChromaDB - `http://localhost:8001`.
+3. API Gateway будет доступен по адресу `http://localhost:8000`.
 
 ## Локальная разработка
 
@@ -70,11 +70,13 @@ uv run pre-commit run --all-files
 Основные переменные описаны в `.env.example`:
 
 - `POSTGRES_*` - подключение к PostgreSQL.
-- `DATABASE_URL` - DSN для SQLAlchemy/AsyncPG.
+- `POSTGRES_DSN` - DSN для ML Worker и API Gateway.
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` - подключение к Redis.
 - `CHROMA_HOST`, `CHROMA_PORT` - подключение к ChromaDB.
 - `SECRET_KEY` - ключ для подписи JWT.
-- `YANDEX_API_KEY`, `YANDEX_FOLDER_ID` - доступ к Yandex AI Studio.
+- `YANDEX_API_KEY`, `YANDEX_FOLDER_ID` - доступ к Yandex AI Studio (OpenAI-совместимый API).
+- `YANDEX_EMBED_MODEL`, `YANDEX_LLM_MODEL` - модели для эмбеддингов и генерации.
+- `NER_MODEL_NAME`, `HF_TOKEN` - модель GLiNER и токен HuggingFace.
 - `UPLOAD_DIR` - директория для загружаемых файлов.
 - `REPORT_DIR` - директория для отчётов ML worker.
 

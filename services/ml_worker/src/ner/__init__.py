@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 from pydantic import BaseModel
+from src.config import settings
 from src.models import Entity, UnifiedDocument
 from src.ner.db_handler import DBHandler
 from src.ner.extractors import get_extractor
@@ -37,8 +38,7 @@ class NERPipeline:
     def ner(self) -> NERExtractor:
         if self._ner is None:
             self._ner = NERExtractor(
-                model_name=self._ner_model_name
-                or "knowledgator/gliner-multilingual-v2.1",
+                model_name=self._ner_model_name or settings.ner_model_name,
                 device=self._ner_device,
                 threshold=self._ner_threshold,
             )

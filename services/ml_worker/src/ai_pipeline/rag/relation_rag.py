@@ -9,9 +9,9 @@ from src.models import Entity, Relation, RelationType
 
 
 class RelationRAG:
-    def __init__(self) -> None:
-        self.store = ChromaStore()
-        self.embedder = YandexEmbedder()
+    def __init__(self, embedder: Any | None = None) -> None:
+        self.store = ChromaStore(embedder=embedder)
+        self.embedder = embedder or YandexEmbedder()
 
     def index_relations(
         self,
@@ -96,12 +96,11 @@ class RelationRAG:
     ) -> list[Relation]:
         if not document_id:
             return []
-        relations, _ = self.retrieve(
-            query="",
-            n_results=1000,
+        chunks = self.store.get_knowledge_by_filter(
             where={"document_id": document_id},
+            limit=1000,
         )
-        return relations
+        return self._chunks_to_relations(chunks)
 
     def index_chains(
         self,

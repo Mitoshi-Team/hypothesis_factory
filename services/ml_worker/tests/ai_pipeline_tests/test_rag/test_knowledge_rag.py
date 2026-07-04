@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from src.ai_pipeline.rag.knowledge_rag import KnowledgeRAG
 
@@ -8,6 +8,8 @@ from src.ai_pipeline.rag.knowledge_rag import KnowledgeRAG
 class TestKnowledgeRAG:
     def test_retrieve_empty_query(self):
         rag = KnowledgeRAG()
+        rag.store = MagicMock()
+        rag.store.query_knowledge.return_value = []
         chunks, context = rag.retrieve("")
         assert len(chunks) == 0
         assert context == ""

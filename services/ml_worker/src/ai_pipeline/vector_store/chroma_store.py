@@ -11,10 +11,11 @@ from src.models import Chunk
 
 
 class ChromaStore:
-    def __init__(self) -> None:
+    def __init__(self, embedder: Optional[Any] = None) -> None:
         self._client: Optional[chromadb.Client] = None
         self._knowledge_collection: Optional[Collection] = None
         self._history_collection: Optional[Collection] = None
+        self._embedder = embedder
 
     def _get_client(self) -> chromadb.Client:
         if self._client is None:
@@ -26,6 +27,12 @@ class ChromaStore:
             except Exception:
                 self._client = chromadb.EphemeralClient(ChromaSettings())
         return self._client
+
+    def _embed_query(self, query_text: str) -> list[float]:
+        if self._embedder is None:
+            raise RuntimeError("Embedder is required for query")
+        embeddings = self._embedder.embed_texts([query_text])
+        return embeddings[0]
 
     def _get_knowledge_collection(self) -> Collection:
         if self._knowledge_collection is None:
@@ -84,13 +91,28 @@ class ChromaStore:
         collection = self._get_knowledge_collection()
         n = n_results or settings.top_k_rag
 
-        results = collection.query(
-            query_texts=[query_text],
-            n_results=n,
-            where=where,
-        )
+        kwargs: dict[str, Any] = {"n_results": n, "where": where}
+        if self._embedder is not None and query_text:
+            kwargs["query_embeddings"] = [self._embed_query(query_text)]
+        else:
+            kwargs["query_texts"] = [query_text or " "]
+
+        results = collection.query(**kwargs)
 
         return self._results_to_chunks(results)
+
+    def get_knowledge_by_filter(
+        self,
+        where: dict[str, Any],
+        limit: int = 1000,
+    ) -> list[Chunk]:
+        collection = self._get_knowledge_collection()
+        results = collection.get(
+            where=where,
+            limit=limit,
+            include=["metadatas", "documents"],
+        )
+        return self._get_results_to_chunks(results)
 
     def populate_history(self, entries: list[dict[str, Any]]) -> None:
         collection = self._get_history_collection()
@@ -138,11 +160,13 @@ class ChromaStore:
         collection = self._get_history_collection()
         n = n_results or settings.top_k_history
 
-        results = collection.query(
-            query_texts=[query_text],
-            n_results=n,
-            where=where,
-        )
+        kwargs: dict[str, Any] = {"n_results": n, "where": where}
+        if self._embedder is not None:
+            kwargs["query_embeddings"] = [self._embed_query(query_text)]
+        else:
+            kwargs["query_texts"] = [query_text]
+
+        results = collection.query(**kwargs)
 
         entries = []
         ids = results.get("ids", [[]])[0]
@@ -169,6 +193,29 @@ class ChromaStore:
         ids = results.get("ids", [[]])[0]
         documents = results.get("documents", [[]])[0]
         metadatas_list = results.get("metadatas", [[]])[0]
+
+        for i in range(len(ids)):
+            meta = metadatas_list[i] if i < len(metadatas_list) else {}
+            element_ids_str = meta.pop("element_ids", "")
+            chunks.append(
+                Chunk(
+                    chunk_id=ids[i],
+                    document_id=meta.pop("document_id", ""),
+                    element_ids=element_ids_str.split(",")
+                    if element_ids_str
+                    else [],
+                    text=documents[i] if i < len(documents) else "",
+                    metadata=meta,
+                )
+            )
+
+        return chunks
+
+    def _get_results_to_chunks(self, results: dict) -> list[Chunk]:
+        chunks = []
+        ids = results.get("ids", [])
+        documents = results.get("documents", [])
+        metadatas_list = results.get("metadatas", [])
 
         for i in range(len(ids)):
             meta = metadatas_list[i] if i < len(metadatas_list) else {}

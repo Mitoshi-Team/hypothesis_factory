@@ -40,7 +40,7 @@ class GeneratorAgent:
         tools = self.postgres_tools.get_tool_definitions()
         tool_handlers = await self.postgres_tools.get_tool_handlers()
 
-        final_text, tool_calls_log = self.client.complete_with_tools(
+        final_text, tool_calls_log = await self.client.complete_with_tools(
             prompt=user_prompt,
             system_prompt=system_prompt,
             tools=tools,

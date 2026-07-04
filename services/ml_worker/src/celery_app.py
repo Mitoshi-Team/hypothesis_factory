@@ -15,4 +15,5 @@ celery_app.conf.update(
     accept_content=["json"],
     task_track_started=True,
     task_acks_late=True,
+    imports=["src.tasks.process_message"],
 )

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 from src.models import Chunk
 
 
 class KnowledgeRAG:
-    def __init__(self) -> None:
-        self.store = ChromaStore()
+    def __init__(self, embedder: Any | None = None) -> None:
+        self.store = ChromaStore(embedder=embedder)
 
     def retrieve(
         self,

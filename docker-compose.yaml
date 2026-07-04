@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-hypothesis-factory}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     networks:
       - hypothesis_factory
     healthcheck:
@@ -23,6 +25,8 @@ services:
     command:
       - redis-server
     restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     networks:
       - hypothesis_factory
     healthcheck:

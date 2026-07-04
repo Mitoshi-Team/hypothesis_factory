@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from typing import Any, Optional
 
 from src.ai_pipeline.state import (
     HistoryEntry,
@@ -12,8 +12,8 @@ from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
 
 class HistoryRAG:
-    def __init__(self) -> None:
-        self.store = ChromaStore()
+    def __init__(self, embedder: Any | None = None) -> None:
+        self.store = ChromaStore(embedder=embedder)
 
     def store_result(
         self,

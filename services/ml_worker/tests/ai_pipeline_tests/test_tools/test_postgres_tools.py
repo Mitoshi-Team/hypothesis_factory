@@ -9,7 +9,7 @@ class TestPostgresTools:
         tools = PostgresTools(dsn="postgresql://localhost/test")
         definitions = tools.get_tool_definitions()
         assert len(definitions) == 5
-        names = {d["name"] for d in definitions}
+        names = {d["function"]["name"] for d in definitions}
         assert "list_tables" in names
         assert "get_table_schema" in names
         assert "query_table" in names
@@ -20,8 +20,9 @@ class TestPostgresTools:
         tools = PostgresTools(dsn="postgresql://localhost/test")
         definitions = tools.get_tool_definitions()
         for d in definitions:
-            assert "parameters" in d
-            assert "type" in d["parameters"]
+            func = d["function"]
+            assert "parameters" in func
+            assert "type" in func["parameters"]
 
     @pytest.mark.asyncio
     async def test_list_tables(self, db_fx):

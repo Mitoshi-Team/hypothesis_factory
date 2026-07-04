@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from src.ai_pipeline.rag.relation_rag import RelationRAG
-from src.models import Entity, EntityLabel, Relation, RelationType
+from src.models import Chunk, Entity, EntityLabel, Relation, RelationType
 
 
 class TestRelationRAG:
@@ -107,18 +107,36 @@ class TestRelationRAG:
     def test_retrieve_by_document_returns_relations(self, chroma_fx):
         rag = RelationRAG()
         rag.embedder = MagicMock()
-        rag.embedder.embed_texts.return_value = [[0.1] * 384]
+        rag.embedder.embed_texts.return_value = [[0.1] * 1536]
+        rag.store = MagicMock()
 
-        entity = Entity(
+        _entity = Entity(
             entity_id="ent_a", name="A", label=EntityLabel.MATERIAL
         )
-        relation = Relation(
+        _relation = Relation(
             relation_id="rel_doc",
             source_id="ent_a",
             target_id="ent_b",
             relation_type=RelationType.INFLUENCES,
         )
-        rag.index_relations([relation], [entity], "doc_123")
+        rag.store.get_knowledge_by_filter.return_value = [
+            Chunk(
+                chunk_id="chunk_test",
+                document_id="doc_123",
+                element_ids=[],
+                text="A [influences] B",
+                metadata={
+                    "type": "relation",
+                    "source_id": "ent_a",
+                    "target_id": "ent_b",
+                    "relation_type": "influences",
+                    "confidence": 0.9,
+                    "evidence": "",
+                    "source_name": "A",
+                    "target_name": "B",
+                },
+            )
+        ]
 
         result = rag.retrieve_by_document("doc_123")
         assert len(result) >= 1
