@@ -403,6 +403,57 @@ class DBExtractor(BaseExtractor):
     source_type = SourceType.DATABASE
 
     def extract(self, file_path: str) -> UnifiedDocument:
+        path = Path(file_path)
+        if path.suffix.lower() == ".csv":
+            import pandas as pd
+
+            try:
+                df = pd.read_csv(file_path)
+            except Exception:
+                df = pd.read_csv(file_path, encoding="cp1251")
+
+            cells = [
+                TableCell(
+                    row=row_idx,
+                    col=col_idx,
+                    text=str(value) if pd.notna(value) else "",
+                    is_header=row_idx == 0,
+                )
+                for row_idx, (_, row) in enumerate(df.iterrows())
+                for col_idx, value in enumerate(row)
+            ]
+            cols = [str(c) for c in df.columns]
+            rows = [
+                [str(v) if pd.notna(v) else None for v in row]
+                for _, row in df.iterrows()
+            ]
+            try:
+                markdown = df.to_markdown(index=False)
+            except ImportError:
+                markdown = None
+
+            table_data = TableData(
+                name=path.stem,
+                columns=cols,
+                rows=rows,
+                cells=cells,
+                markdown=markdown,
+            )
+            elements = [
+                UnifiedElement(
+                    type=ElementType.TABLE,
+                    text=f"Table: {path.stem}\n{df.to_string(index=False)}",
+                    table_data=table_data,
+                    extractor="pandas",
+                    source_type=SourceType.DATABASE,
+                )
+            ]
+            return self._make_document(
+                file_path=file_path,
+                elements=elements,
+                extractor="pandas",
+            )
+
         from sqlalchemy import create_engine, inspect, text
 
         db_url = self._resolve_db_url(file_path)

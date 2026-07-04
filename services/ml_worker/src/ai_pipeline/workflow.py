@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
 from src.ai_pipeline.agents.generator import GeneratorAgent
@@ -21,6 +22,8 @@ from src.ai_pipeline.state import (
 from src.ai_pipeline.tools.postgres_tools import PostgresTools
 from src.models import UnifiedDocument
 from src.ner import extract_document, extract_entities
+
+logger = logging.getLogger(__name__)
 
 
 class HypothesisPipeline:
@@ -133,13 +136,25 @@ class HypothesisPipeline:
         if state.document is not None:
             return state
 
+        from src.ner import get_pipeline
+
         if state.input.file_paths:
             documents = [extract_document(fp) for fp in state.input.file_paths]
+            for doc in documents:
+                try:
+                    get_pipeline().db.copy_tables(doc)
+                except Exception:
+                    logger.warning("Failed to copy tables to PostgreSQL")
             state.document = self._merge_documents(documents)
             return state
 
         if state.input.file_path:
-            state.document = extract_document(state.input.file_path)
+            doc = extract_document(state.input.file_path)
+            try:
+                get_pipeline().db.copy_tables(doc)
+            except Exception:
+                logger.warning("Failed to copy tables to PostgreSQL")
+            state.document = doc
             return state
 
         return state

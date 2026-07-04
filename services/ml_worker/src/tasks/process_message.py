@@ -18,7 +18,7 @@ from src.db.models import NEREntity as NEREntityORM
 from src.db.models import PipelineResult as PipelineResultORM
 from src.db.models import Session as SessionORM
 from src.models import Entity, UnifiedDocument
-from src.ner import extract_document, extract_entities
+from src.ner import extract_document, extract_entities, get_pipeline
 from src.report import save_report
 from src.storage import download_file
 
@@ -147,6 +147,10 @@ def _ingest_files(
     for fp in upload_files:
         local_path = download_file(fp)
         doc = extract_document(local_path)
+        try:
+            get_pipeline().db.copy_tables(doc)
+        except Exception:
+            logger.exception("Failed to copy tables to PostgreSQL for %s", fp)
         entities = extract_entities(doc)
         documents.append(doc)
         all_entities.extend(entities)
