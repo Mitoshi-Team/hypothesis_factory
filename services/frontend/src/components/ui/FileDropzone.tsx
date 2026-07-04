@@ -39,13 +39,18 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
           addFiles(e.dataTransfer.files)
         }}
         className={cn(
-          'flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-7 text-center transition-colors',
+          'flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-7 text-center transition-all duration-200 ease-out active:scale-[0.99]',
           dragging
-            ? 'border-accent-200 bg-accent-50'
+            ? 'scale-[1.01] border-accent-200 bg-accent-50'
             : 'border-line-strong bg-bg hover:border-accent-200 hover:bg-accent-50/60',
         )}
       >
-        <FileUp className="h-5 w-5 text-accent-500" />
+        <FileUp
+          className={cn(
+            'h-5 w-5 text-accent-500 transition-transform duration-200 ease-out',
+            dragging && '-translate-y-0.5',
+          )}
+        />
         <span className="text-sm font-medium text-ink">
           Перетащите файлы или нажмите для выбора
         </span>
@@ -66,13 +71,13 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
           {files.map((name) => (
             <li
               key={name}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 py-1 text-xs text-ink-soft"
+              className="inline-flex animate-fade-up items-center gap-1.5 rounded-lg border border-line bg-card py-1 pl-2.5 pr-1.5 text-xs text-ink-soft"
             >
               <span className="max-w-[180px] truncate">{name}</span>
               <button
                 type="button"
                 onClick={() => removeFile(name)}
-                className="text-ink-faint hover:text-red-500"
+                className="grid h-5 w-5 place-items-center rounded-md text-ink-faint transition-colors duration-150 hover:bg-red-50 hover:text-red-500"
                 aria-label={`Удалить ${name}`}
               >
                 <X className="h-3.5 w-3.5" />
