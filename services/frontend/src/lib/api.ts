@@ -5,6 +5,16 @@
 
 import type { HypothesisResult, Message, Session, User, Weights } from '@/types'
 import { DEFAULT_WEIGHTS } from '@/types'
+import {
+  DEMO_PASSWORD,
+  DEMO_SENTINEL,
+  DEMO_USERNAME,
+  demoCreateSession,
+  demoMessageId,
+  demoResult,
+  demoSessionDetail,
+  demoSessionList,
+} from '@/lib/demo'
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1'
@@ -101,6 +111,11 @@ export function clearAuthTokens(): void {
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem(USER_KEY)
+}
+
+/** True when the built-in demo account is signed in — serve mock data offline. */
+function isDemo(): boolean {
+  return localStorage.getItem(REFRESH_KEY) === DEMO_SENTINEL
 }
 
 // Broadcast for "refresh token is dead" — the auth provider subscribes and
@@ -206,6 +221,14 @@ async function request(path: string, opts: RequestOptions = {}): Promise<Respons
 // Auth
 
 export async function login(username: string, password: string): Promise<User> {
+  // Built-in demo account: skip the network and mark the session as demo.
+  if (username === DEMO_USERNAME && password === DEMO_PASSWORD) {
+    localStorage.setItem(ACCESS_KEY, DEMO_SENTINEL)
+    localStorage.setItem(REFRESH_KEY, DEMO_SENTINEL)
+    localStorage.setItem(USER_KEY, username)
+    return { username }
+  }
+
   const res = await request('/auth/login', {
     method: 'POST',
     json: { username, password },
@@ -326,6 +349,7 @@ function mapMessage(m: ApiMessage): Message {
 // Sessions
 
 export async function fetchSessions(): Promise<Session[]> {
+  if (isDemo()) return demoSessionList()
   const res = await request('/sessions')
   const data = await res.json()
   const items: ApiSessionSummary[] = data.items ?? []
@@ -341,6 +365,11 @@ export async function fetchSessions(): Promise<Session[]> {
 }
 
 export async function fetchSessionDetail(sessionId: string): Promise<Session> {
+  if (isDemo()) {
+    const s = demoSessionDetail(sessionId)
+    if (s) return s
+    throw new ApiError('NOT_FOUND', ERROR_MESSAGES.NOT_FOUND, { status: 404 })
+  }
   const res = await request(`/sessions/${sessionId}`)
   const d: ApiSessionDetail = await res.json()
   const messages = (d.messages ?? []).map(mapMessage)
@@ -370,6 +399,7 @@ export async function createSession(input: {
   constraints: string
   weights: Weights
 }): Promise<Session> {
+  if (isDemo()) return demoCreateSession(input)
   const res = await request('/sessions', { method: 'POST', json: input })
   const d: ApiSessionDetail = await res.json()
   return {
@@ -384,6 +414,7 @@ export async function createSession(input: {
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
+  if (isDemo()) return
   await request(`/sessions/${sessionId}`, { method: 'DELETE' })
 }
 
@@ -395,6 +426,7 @@ export async function sendMessage(
   content: string,
   files: File[],
 ): Promise<{ messageId: string; taskId: string }> {
+  if (isDemo()) return { messageId: demoMessageId(), taskId: 'demo' }
   const form = new FormData()
   form.append('content', content)
   for (const file of files) form.append('files', file, file.name)
@@ -409,6 +441,11 @@ export type ResultState =
   | { state: 'failed' }
 
 export async function fetchResult(sessionId: string, messageId: string): Promise<ResultState> {
+  if (isDemo()) {
+    // Brief pause so the "thinking" state is visible before the card appears.
+    await delay(1400)
+    return { state: 'done', result: demoResult() }
+  }
   const res = await request(`/sessions/${sessionId}/results/${messageId}`)
   const data = await res.json()
   if (res.status === 202 || data.status === 'processing' || data.status === 'queued') {

@@ -3,6 +3,7 @@ import { ArrowLeft, Eye, EyeOff, History, Layers, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
 import { humanizeError, ApiError } from '@/lib/api'
+import { DEMO_PASSWORD, DEMO_USERNAME } from '@/lib/demo'
 import { Spinner } from '@/components/ui/Spinner'
 
 interface Props {
@@ -66,6 +67,18 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
     setError(msg)
     setShaking(true)
     setSubmitting(false)
+  }
+
+  const enterDemo = async () => {
+    if (submitting) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await login(DEMO_USERNAME, DEMO_PASSWORD)
+      onSuccess()
+    } catch (err) {
+      fail(humanizeError(err))
+    }
   }
 
   const switchMode = (next: Mode) => {
@@ -312,9 +325,21 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
             </button>
           </div>
 
-          <p className="mt-6 border-t border-line pt-5 text-[12px] leading-relaxed text-ink-faint">
-            Забыли логин или пароль? Обратитесь к администратору.
-          </p>
+          {/* Demo access — one click into a fully seeded, offline chat history */}
+          <div className="mt-6 border-t border-line pt-5">
+            <button
+              type="button"
+              onClick={enterDemo}
+              disabled={submitting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-line-strong hover:text-ink disabled:opacity-60"
+            >
+              <Sparkles className="h-4 w-4 text-ink-faint" strokeWidth={2} />
+              Посмотреть демо без регистрации
+            </button>
+            <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">
+              Забыли логин или пароль? Обратитесь к администратору.
+            </p>
+          </div>
         </div>
       </div>
     </div>
