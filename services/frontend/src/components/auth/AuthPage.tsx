@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  ArrowLeft,
-  Eye,
-  EyeOff,
-  FlaskConical,
-  History,
-  Layers,
-  Sparkles,
-} from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, History, Layers, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
 import { humanizeError, ApiError } from '@/lib/api'
@@ -130,63 +122,47 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
       {/* ---- Left brand panel (desktop only) — slides in from the left ---- */}
       <aside
         className={cn(
-          'relative hidden w-[44%] shrink-0 overflow-hidden bg-accent-600 text-white transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:flex md:flex-col',
+          'relative hidden w-[44%] shrink-0 overflow-hidden text-white transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:flex md:flex-col',
           active ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Gradient wash + drifting glows */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-500 via-accent-600 to-accent-700" />
-        <div className="pointer-events-none absolute -left-24 -top-20 h-80 w-80 rounded-full bg-white/15 blur-3xl animate-float" />
+        {/* Living gradient: an oversized multi-stop wash drifting diagonally,
+            layered with a few slowly floating blurred glows. */}
+        <div className="pointer-events-none absolute inset-0 animate-gradient bg-[length:220%_220%] bg-[linear-gradient(125deg,#3B78F5_0%,#1F57D6_34%,#1A47B4_58%,#2E6BF0_82%,#4C86F7_100%)]" />
+        <div className="pointer-events-none absolute -left-28 -top-24 h-80 w-80 rounded-full bg-white/20 blur-3xl animate-float" />
         <div
-          className="pointer-events-none absolute -bottom-28 right-[-10%] h-96 w-96 rounded-full bg-accent-200/25 blur-3xl animate-float"
-          style={{ animationDelay: '1.5s' }}
+          className="pointer-events-none absolute -bottom-32 right-[-12%] h-96 w-96 rounded-full bg-sky-300/25 blur-3xl animate-float"
+          style={{ animationDelay: '2s' }}
         />
-        {/* Subtle dot grid */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.18]"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)',
-            backgroundSize: '22px 22px',
-          }}
+          className="pointer-events-none absolute left-1/4 top-1/2 h-72 w-72 rounded-full bg-white/10 blur-3xl animate-float"
+          style={{ animationDelay: '4s' }}
         />
 
-        <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 backdrop-blur-sm">
-              <FlaskConical className="h-5 w-5" strokeWidth={2} />
-            </span>
-            <span className="text-[15px] font-semibold tracking-tight">Фабрика гипотез</span>
-          </div>
-
+        <div className="relative z-10 flex h-full flex-col justify-center p-10 xl:p-14">
           <div
             className={cn('max-w-sm', active && 'animate-rise-in')}
             style={{ animationDelay: '250ms' }}
           >
-            <h1 className="text-[30px] font-semibold leading-[1.15] tracking-tight xl:text-[34px]">
+            <h1 className="text-[32px] font-semibold leading-[1.12] tracking-tight xl:text-[38px]">
               Гипотезы,
               <br />
               подкреплённые данными
             </h1>
-            <p className="mt-3.5 text-[14px] leading-relaxed text-white/75">
+            <p className="mt-4 text-[14.5px] leading-relaxed text-white/75">
               Опишите технологическую задачу — получите гипотезу с обоснованием, ожидаемым
               эффектом и оценкой рисков.
             </p>
 
-            <ul className="mt-8 flex flex-col gap-3.5">
+            <ul className="mt-9 flex flex-col gap-4">
               {PERKS.map((p) => (
-                <li key={p.text} className="flex items-center gap-3 text-[13.5px] text-white/85">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/12 ring-1 ring-inset ring-white/15">
-                    <p.icon className="h-4 w-4" strokeWidth={2} />
-                  </span>
+                <li key={p.text} className="flex items-center gap-3 text-[14px] text-white/85">
+                  <p.icon className="h-[18px] w-[18px] shrink-0 text-white/55" strokeWidth={2} />
                   {p.text}
                 </li>
               ))}
             </ul>
           </div>
-
-          <p className="text-[12px] text-white/45">
-            Генератор научных гипотез для материаловедения
-          </p>
         </div>
       </aside>
 
@@ -217,11 +193,6 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
           )}
           style={{ animationDelay: shaking ? '0ms' : '180ms' }}
         >
-          {/* Mobile brand mark (brand panel is hidden < md) */}
-          <span className="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-accent-50 text-accent-600 md:hidden">
-            <FlaskConical className="h-5 w-5" strokeWidth={2} />
-          </span>
-
           <h2 className="text-2xl font-semibold tracking-tight text-ink">
             {isRegister ? 'Создать аккаунт' : 'С возвращением'}
           </h2>

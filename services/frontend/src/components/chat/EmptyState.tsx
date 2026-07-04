@@ -1,4 +1,4 @@
-import { FlaskConical, LogIn } from 'lucide-react'
+import { LoginPrompt } from '@/components/auth/LoginPrompt'
 
 const EXAMPLES = [
   'Повысить жаропрочность никелевого сплава ХН62 на 15% без роста себестоимости шихты',
@@ -15,12 +15,9 @@ interface Props {
 
 export function EmptyState({ authenticated, onSelect, onLogin }: Props) {
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center px-4 py-12">
+    <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-start px-4 pb-12 pt-[14vh]">
       <div className="animate-fade-up" key={authenticated ? 'hero-auth' : 'hero-guest'}>
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent-50 text-accent-600">
-          <FlaskConical className="h-6 w-6" strokeWidth={1.8} />
-        </span>
-        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
           С какой задачей поработаем?
         </h1>
         <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-ink-soft">
@@ -47,27 +44,14 @@ export function EmptyState({ authenticated, onSelect, onLogin }: Props) {
           ))}
         </div>
       ) : (
-        <div
-          key="login-cta"
-          className="mt-7 animate-fade-up rounded-2xl border border-line bg-card px-5 py-5"
+        <LoginPrompt
+          className="mt-7"
           style={{ animationDelay: '80ms' }}
-        >
-          <p className="text-[15px] font-medium text-ink">
-            Войдите, чтобы пользоваться чатом
-          </p>
-          <p className="mt-1.5 max-w-md text-[13.5px] leading-relaxed text-ink-soft">
-            Сообщение можно набрать уже сейчас — вместе с ограничениями, весами и файлами. После
-            входа мы автоматически отправим его и откроем чат.
-          </p>
-          <button
-            type="button"
-            onClick={onLogin}
-            className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-accent-500 px-4 py-2.5 text-[13.5px] font-medium text-white shadow-soft transition-all duration-200 ease-out hover:bg-accent-600 active:scale-[0.97]"
-          >
-            <LogIn className="h-4 w-4" strokeWidth={2.2} />
-            Войти или зарегистрироваться
-          </button>
-        </div>
+          title="Войдите, чтобы пользоваться чатом"
+          description="Сообщение можно набрать уже сейчас — вместе с ограничениями, весами и файлами. После входа мы автоматически отправим его и откроем чат."
+          actionLabel="Войти или зарегистрироваться"
+          onLogin={onLogin}
+        />
       )}
     </div>
   )
