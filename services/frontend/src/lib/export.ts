@@ -1,17 +1,12 @@
 import { jsPDF } from 'jspdf'
 import { BorderStyle, Document, Packer, Paragraph, TextRun } from 'docx'
 import { saveAs } from 'file-saver'
-import type { BusinessReport, Hypothesis } from '@/types'
-import {
-  formatDate,
-  reportFileName,
-  riskCategoryLabel,
-  riskLevelLabel,
-  sourceKindLabel,
-} from './format'
-const BRAND: [number, number, number] = [33, 69, 224]
-const INK: [number, number, number] = [30, 41, 59]
-const MUTED: [number, number, number] = [100, 116, 139]
+import type { HypothesisResult } from '@/types'
+import { CRITERIA_LABELS, reportFileName, verdictLabel } from './format'
+
+const ACCENT: [number, number, number] = [46, 107, 240]
+const INK: [number, number, number] = [28, 29, 31]
+const MUTED: [number, number, number] = [99, 102, 107]
 
 async function ensureFonts(doc: jsPDF) {
   const { dejaVuSansRegular, dejaVuSansBold } = await import('./fonts/dejavu')
@@ -21,9 +16,14 @@ async function ensureFonts(doc: jsPDF) {
   doc.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold')
 }
 
-export async function exportReportToPdf(report: BusinessReport): Promise<void> {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+function scoreLine(r: HypothesisResult): string {
+  return (Object.keys(CRITERIA_LABELS) as Array<keyof typeof r.scores>)
+    .map((k) => `${CRITERIA_LABELS[k]} ${r.scores[k].toFixed(1)}`)
+    .join('     ')
+}
 
+export async function exportResultToPdf(result: HypothesisResult): Promise<void> {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const marginX = 18
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -67,7 +67,7 @@ export async function exportReportToPdf(report: BusinessReport): Promise<void> {
 
   const rule = () => {
     ensureSpace(4)
-    doc.setDrawColor(226, 232, 240)
+    doc.setDrawColor(226, 228, 230)
     doc.setLineWidth(0.3)
     doc.line(marginX, y, pageWidth - marginX, y)
     y += 5
@@ -75,105 +75,44 @@ export async function exportReportToPdf(report: BusinessReport): Promise<void> {
 
   const sectionTitle = (text: string) => {
     y += 2
-    paragraph(text.toUpperCase(), { size: 9, bold: true, color: BRAND, lineHeight: 5, gapAfter: 1.5 })
+    paragraph(text, { size: 9, bold: true, color: ACCENT, lineHeight: 5, gapAfter: 1.5 })
   }
 
   paragraph('Фабрика гипотез', { size: 20, bold: true, lineHeight: 9, gapAfter: 1 })
-  paragraph('Бизнес-отчёт', { size: 11, color: MUTED, lineHeight: 5, gapAfter: 1 })
-  paragraph(`Дата генерации: ${formatDate(report.createdAt)}`, {
-    size: 9,
-    color: MUTED,
+  paragraph('Отчёт по гипотезе', { size: 11, color: MUTED, lineHeight: 5, gapAfter: 3 })
+  rule()
+
+  paragraph(result.title, { size: 14, bold: true, lineHeight: 7, gapAfter: 2 })
+  paragraph(`${scoreLine(result)}     ·     ${verdictLabel(result.verdict)}`, {
+    size: 9.5,
+    color: ACCENT,
     lineHeight: 5,
     gapAfter: 3,
   })
-  rule()
 
-  sectionTitle('Технологическая проблема')
-  paragraph(report.problem, { size: 12, bold: true, lineHeight: 6, gapAfter: 3 })
+  sectionTitle('Гипотеза')
+  paragraph(result.hypothesis, { size: 10.5, lineHeight: 5.6, gapAfter: 3 })
 
-  if (report.constraints.length > 0) {
-    sectionTitle('Ограничения')
-    for (const c of report.constraints) {
-      paragraph(`•  ${c}`, { size: 10, lineHeight: 5.4, indent: 2 })
-    }
-    y += 3
+  sectionTitle('Ожидаемый эффект')
+  paragraph(result.expectedEffect, { size: 10.5, lineHeight: 5.6, gapAfter: 3 })
+
+  sectionTitle('Риски')
+  for (const r of result.risks) paragraph(`•  ${r}`, { size: 10, lineHeight: 5.4, indent: 2 })
+  y += 2
+
+  if (result.suggestions.length > 0) {
+    sectionTitle('Рекомендации по проверке')
+    for (const s of result.suggestions) paragraph(`•  ${s}`, { size: 10, lineHeight: 5.4, indent: 2 })
+    y += 2
   }
 
-  sectionTitle('Резюме')
-  paragraph(report.summary, { size: 10.5, lineHeight: 5.6, gapAfter: 4 })
+  sectionTitle('Источники')
+  for (const s of result.evidenceSources) paragraph(`•  ${s}`, { size: 9.5, lineHeight: 5, indent: 2 })
 
-  rule()
-  sectionTitle(`Гипотезы (${report.hypotheses.length})`)
-  y += 1
-
-  report.hypotheses.forEach((h, i) => {
-    ensureSpace(28)
-    paragraph(`${i + 1}. ${h.title}`, { size: 12.5, bold: true, lineHeight: 6, gapAfter: 1.5 })
-    paragraph(`Новизна ${h.novelty}/100     Реализуемость ${h.feasibility}/100     KPI: ${h.kpiImpact}`, {
-      size: 9.5,
-      color: BRAND,
-      lineHeight: 5,
-      gapAfter: 2.5,
-    })
-
-    const field = (label: string, value: string) => {
-      doc.setFont('DejaVu', 'bold')
-      doc.setFontSize(10)
-      doc.setTextColor(...INK)
-      const labelWidth = doc.getTextWidth(label + ' ')
-      ensureSpace(5.4)
-      doc.text(label, marginX, y)
-      doc.setFont('DejaVu', 'normal')
-      doc.setTextColor(...MUTED)
-      const lines = doc.splitTextToSize(value, contentWidth - labelWidth) as string[]
-      lines.forEach((l, idx) => {
-        if (idx > 0) ensureSpace(5.4)
-        doc.text(l, idx === 0 ? marginX + labelWidth : marginX, y)
-        y += 5.4
-      })
-    }
-
-    field('Обоснование:', h.rationale)
-    field('Механизм:', h.mechanism)
-    field('Ожидаемая ценность:', h.expectedValue)
-
-    y += 1
-    paragraph('Риски', { size: 9, bold: true, color: MUTED, lineHeight: 4.6, gapAfter: 1 })
-    for (const r of h.risks) {
-      paragraph(`•  ${riskCategoryLabel(r.category)} (${riskLevelLabel(r.level)}): ${r.description}`, {
-        size: 9.5,
-        lineHeight: 5,
-        indent: 2,
-      })
-    }
-
-    y += 1.5
-    paragraph('Источники', { size: 9, bold: true, color: MUTED, lineHeight: 4.6, gapAfter: 1 })
-    for (const s of h.sources) {
-      paragraph(
-        `•  [${sourceKindLabel(s.kind)}] ${s.title}${s.year ? ` (${s.year})` : ''}`,
-        { size: 9.5, lineHeight: 5, indent: 2 },
-      )
-    }
-
-    y += 4
-    if (i < report.hypotheses.length - 1) rule()
-  })
-
-  doc.save(reportFileName(report.problem, 'pdf'))
+  doc.save(reportFileName(result.title, 'pdf'))
 }
 
 const FONT = 'Calibri'
-
-function labeled(label: string, value: string) {
-  return new Paragraph({
-    spacing: { after: 80 },
-    children: [
-      new TextRun({ text: `${label} `, bold: true, size: 22, font: FONT }),
-      new TextRun({ text: value, size: 22, font: FONT }),
-    ],
-  })
-}
 
 function bullet(text: string) {
   return new Paragraph({
@@ -186,58 +125,13 @@ function bullet(text: string) {
 function sectionHeading(text: string) {
   return new Paragraph({
     spacing: { before: 240, after: 100 },
-    children: [
-      new TextRun({ text: text.toUpperCase(), bold: true, size: 20, color: '2145E0', font: FONT }),
-    ],
+    children: [new TextRun({ text, bold: true, size: 20, color: '2E6BF0', font: FONT })],
   })
 }
 
-function hypothesisParagraphs(h: Hypothesis, index: number): Paragraph[] {
-  return [
-    new Paragraph({
-      spacing: { before: 260, after: 60 },
-      children: [
-        new TextRun({ text: `${index + 1}. ${h.title}`, bold: true, size: 26, color: '1E293B', font: FONT }),
-      ],
-    }),
-    new Paragraph({
-      spacing: { after: 120 },
-      children: [
-        new TextRun({
-          text: `Новизна ${h.novelty}/100     Реализуемость ${h.feasibility}/100     KPI: ${h.kpiImpact}`,
-          size: 20,
-          color: '2145E0',
-          font: FONT,
-        }),
-      ],
-    }),
-    labeled('Обоснование:', h.rationale),
-    labeled('Механизм влияния:', h.mechanism),
-    labeled('Ожидаемая ценность:', h.expectedValue),
-    new Paragraph({
-      spacing: { before: 80, after: 40 },
-      children: [new TextRun({ text: 'Риски', bold: true, size: 20, color: '64748B', font: FONT })],
-    }),
-    ...h.risks.map((r) =>
-      bullet(`${riskCategoryLabel(r.category)} (${riskLevelLabel(r.level)}): ${r.description}`),
-    ),
-    new Paragraph({
-      spacing: { before: 80, after: 40 },
-      children: [new TextRun({ text: 'Источники', bold: true, size: 20, color: '64748B', font: FONT })],
-    }),
-    ...h.sources.map((s) =>
-      bullet(`[${sourceKindLabel(s.kind)}] ${s.title}${s.year ? ` (${s.year})` : ''}${s.url ? ` — ${s.url}` : ''}`),
-    ),
-  ]
-}
-
-export async function exportReportToDocx(report: BusinessReport): Promise<void> {
+export async function exportResultToDocx(result: HypothesisResult): Promise<void> {
   const doc = new Document({
-    styles: {
-      default: {
-        document: { run: { font: FONT, size: 22 } },
-      },
-    },
+    styles: { default: { document: { run: { font: FONT, size: 22 } } } },
     sections: [
       {
         properties: { page: { margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 } } },
@@ -245,48 +139,57 @@ export async function exportReportToDocx(report: BusinessReport): Promise<void> 
           new Paragraph({
             spacing: { after: 40 },
             children: [
-              new TextRun({ text: 'Фабрика гипотез', bold: true, size: 40, color: '1E293B', font: FONT }),
+              new TextRun({ text: 'Фабрика гипотез', bold: true, size: 40, color: '1C1D1F', font: FONT }),
             ],
           }),
           new Paragraph({
-            spacing: { after: 40 },
-            children: [new TextRun({ text: 'Бизнес-отчёт', size: 24, color: '64748B', font: FONT })],
+            border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E4E6', space: 8 } },
+            spacing: { after: 160 },
+            children: [new TextRun({ text: 'Отчёт по гипотезе', size: 22, color: '63666B', font: FONT })],
+          }),
+
+          new Paragraph({
+            spacing: { after: 60 },
+            children: [new TextRun({ text: result.title, bold: true, size: 28, color: '1C1D1F', font: FONT })],
           }),
           new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 8 } },
-            spacing: { after: 120 },
+            spacing: { after: 140 },
             children: [
               new TextRun({
-                text: `Дата генерации: ${formatDate(report.createdAt)}`,
+                text: `${scoreLine(result)}     ·     ${verdictLabel(result.verdict)}`,
                 size: 20,
-                color: '64748B',
+                color: '2E6BF0',
                 font: FONT,
               }),
             ],
           }),
 
-          sectionHeading('Технологическая проблема'),
+          sectionHeading('Гипотеза'),
           new Paragraph({
             spacing: { after: 120 },
-            children: [new TextRun({ text: report.problem, bold: true, size: 24, font: FONT })],
+            children: [new TextRun({ text: result.hypothesis, size: 22, font: FONT })],
           }),
 
-          sectionHeading('Ограничения'),
-          ...report.constraints.map((c) => bullet(c)),
-
-          sectionHeading('Резюме'),
+          sectionHeading('Ожидаемый эффект'),
           new Paragraph({
             spacing: { after: 120 },
-            children: [new TextRun({ text: report.summary, size: 22, font: FONT })],
+            children: [new TextRun({ text: result.expectedEffect, size: 22, font: FONT })],
           }),
 
-          sectionHeading(`Гипотезы (${report.hypotheses.length})`),
-          ...report.hypotheses.flatMap((h, i) => hypothesisParagraphs(h, i)),
+          sectionHeading('Риски'),
+          ...result.risks.map(bullet),
+
+          ...(result.suggestions.length > 0
+            ? [sectionHeading('Рекомендации по проверке'), ...result.suggestions.map(bullet)]
+            : []),
+
+          sectionHeading('Источники'),
+          ...result.evidenceSources.map(bullet),
         ],
       },
     ],
   })
 
   const blob = await Packer.toBlob(doc)
-  saveAs(blob, reportFileName(report.problem, 'docx'))
+  saveAs(blob, reportFileName(result.title, 'docx'))
 }

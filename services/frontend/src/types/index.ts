@@ -1,54 +1,62 @@
-export interface Source {
-  id: string
-  title: string
-  kind: 'article' | 'patent' | 'report' | 'dataset'
-  url?: string
-  year?: number
-}
+// Data model aligned with docs/API_CONTRACT.md (sessions, messages, results).
 
-export interface Risk {
-  category: 'technical' | 'economic' | 'regulatory'
-  description: string
-  level: 'low' | 'medium' | 'high'
-}
-
-export interface Hypothesis {
-  id: string
-  title: string
-  rationale: string
-  mechanism: string
-  sources: Source[]
+/** Criteria weights set once per session. */
+export interface Weights {
   novelty: number
   feasibility: number
-  risks: Risk[]
-  expectedValue: string
-  kpiImpact: string
+  effect: number
+  risk: number
 }
 
-export interface BusinessReport {
+/** Per-criterion scores from the review, on a 0-10 scale. */
+export interface Scores {
+  novelty: number
+  feasibility: number
+  effect: number
+  risk: number
+}
+
+export type Verdict = 'accept' | 'reject'
+
+/** A single generated hypothesis with its review, mirroring `pipeline_results`. */
+export interface HypothesisResult {
+  title: string
+  hypothesis: string
+  expectedEffect: string
+  scores: Scores
+  verdict: Verdict
+  risks: string[]
+  suggestions: string[]
+  evidenceSources: string[]
+}
+
+export type Message =
+  | {
+      id: string
+      role: 'user'
+      content: string
+      files: string[]
+    }
+  | {
+      id: string
+      role: 'assistant'
+      status: 'thinking' | 'done'
+      iteration: number
+      result?: HypothesisResult
+    }
+
+export interface Session {
   id: string
+  title: string
   createdAt: string
-  problem: string
-  constraints: string[]
-  summary: string
-  hypotheses: Hypothesis[]
-}
-
-export interface HistoryEntry {
-  id: string
-  createdAt: string
-  problem: string
-  reportId: string
-  hypothesisCount: number
-}
-
-export interface GenerationInput {
-  problem: string
   constraints: string
-  knowledgeBase: {
-    articles: string
-    patents: string
-    reports: string
-  }
-  materials: string[]
+  weights: Weights
+  messages: Message[]
+}
+
+export const DEFAULT_WEIGHTS: Weights = {
+  novelty: 1.5,
+  feasibility: 1.0,
+  effect: 2.0,
+  risk: 0.5,
 }
