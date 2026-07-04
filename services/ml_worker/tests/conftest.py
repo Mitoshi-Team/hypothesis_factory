@@ -7,9 +7,12 @@ import chromadb
 import pytest
 from chromadb.config import Settings as ChromaSettings
 
-# Set dummy credentials for testing Yandex AI Studio Client / OpenAI client
-os.environ.setdefault("YANDEX_API_KEY", "dummy_yandex_api_key")
-os.environ.setdefault("YANDEX_FOLDER_ID", "dummy_yandex_folder_id")
+# Set dummy credentials for testing Yandex AI Studio Client / OpenAI client if empty/not set
+if not os.environ.get("YANDEX_API_KEY"):
+    os.environ["YANDEX_API_KEY"] = "dummy_yandex_api_key"
+
+if not os.environ.get("YANDEX_FOLDER_ID"):
+    os.environ["YANDEX_FOLDER_ID"] = "dummy_yandex_folder_id"
 
 
 @pytest.fixture(autouse=True)
