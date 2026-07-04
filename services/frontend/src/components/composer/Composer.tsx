@@ -8,7 +8,7 @@ export interface ComposerPayload {
   problem: string
   constraints: string
   weights: Weights
-  files: string[]
+  files: File[]
 }
 
 interface Props {
