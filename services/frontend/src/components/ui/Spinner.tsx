@@ -1,6 +1,8 @@
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 export function Spinner({ className }: { className?: string }) {
+  const { t } = useI18n()
   return (
     <span
       className={cn(
@@ -8,7 +10,7 @@ export function Spinner({ className }: { className?: string }) {
         className,
       )}
       role="status"
-      aria-label="Загрузка"
+      aria-label={t('common.loading')}
     />
   )
 }

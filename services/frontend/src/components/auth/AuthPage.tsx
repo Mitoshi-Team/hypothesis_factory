@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Eye, EyeOff, History, Layers, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { humanizeError, ApiError } from '@/lib/api'
 import { DEMO_PASSWORD, DEMO_USERNAME } from '@/lib/demo'
 import { Spinner } from '@/components/ui/Spinner'
@@ -16,9 +17,9 @@ interface Props {
 type Mode = 'login' | 'register'
 
 const PERKS = [
-  { icon: History, text: 'История сессий всегда под рукой' },
-  { icon: Layers, text: 'Итеративная работа над гипотезой' },
-  { icon: Sparkles, text: 'Оценка по критериям и рискам' },
+  { icon: History, key: 'auth.perk1' },
+  { icon: Layers, key: 'auth.perk2' },
+  { icon: Sparkles, key: 'auth.perk3' },
 ]
 
 /**
@@ -31,6 +32,7 @@ const PERKS = [
  */
 export function AuthPage({ active, onClose, onSuccess }: Props) {
   const { login, register } = useAuth()
+  const { t } = useI18n()
   const [mode, setMode] = useState<Mode>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -92,11 +94,11 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
     e.preventDefault()
     if (submitting) return
     if (!username.trim() || !password) {
-      fail('Введите логин и пароль.')
+      fail(t('auth.errEnterCreds'))
       return
     }
     if (isRegister && password !== confirm) {
-      fail('Пароли не совпадают.')
+      fail(t('auth.errPwMismatch'))
       return
     }
     setSubmitting(true)
@@ -107,9 +109,9 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
       onSuccess()
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        fail('Неверный логин или пароль.')
+        fail(t('auth.errBadCreds'))
       } else if (isRegister && err instanceof ApiError && err.status === 409) {
-        fail('Такой логин уже занят.')
+        fail(t('auth.errTaken'))
       } else {
         fail(humanizeError(err))
       }
@@ -130,7 +132,7 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
       )}
       aria-hidden={!active}
       role="region"
-      aria-label={isRegister ? 'Регистрация' : 'Авторизация'}
+      aria-label={isRegister ? t('auth.regionRegister') : t('auth.regionLogin')}
     >
       {/* ---- Left brand panel (desktop only) — slides in from the left ---- */}
       <aside
@@ -158,20 +160,17 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
             style={{ animationDelay: '250ms' }}
           >
             <h1 className="text-[32px] font-semibold leading-[1.12] tracking-tight xl:text-[38px]">
-              Гипотезы,
-              <br />
-              подкреплённые данными
+              {t('auth.brandTitle')}
             </h1>
             <p className="mt-4 text-[14.5px] leading-relaxed text-white/75">
-              Опишите технологическую задачу — получите гипотезу с обоснованием, ожидаемым
-              эффектом и оценкой рисков.
+              {t('auth.brandDesc')}
             </p>
 
             <ul className="mt-9 flex flex-col gap-4">
               {PERKS.map((p) => (
-                <li key={p.text} className="flex items-center gap-3 text-[14px] text-white/85">
+                <li key={p.key} className="flex items-center gap-3 text-[14px] text-white/85">
                   <p.icon className="h-[18px] w-[18px] shrink-0 text-white/55" strokeWidth={2} />
-                  {p.text}
+                  {t(p.key)}
                 </li>
               ))}
             </ul>
@@ -192,7 +191,7 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
           className="absolute left-4 top-4 flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink-soft transition-colors hover:bg-line/60 hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" />
-          К чату
+          {t('auth.backToChat')}
         </button>
 
         <div
@@ -207,17 +206,15 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
           style={{ animationDelay: shaking ? '0ms' : '180ms' }}
         >
           <h2 className="text-2xl font-semibold tracking-tight text-ink">
-            {isRegister ? 'Создать аккаунт' : 'С возвращением'}
+            {isRegister ? t('auth.createAccount') : t('auth.welcomeBack')}
           </h2>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">
-            {isRegister
-              ? 'Придумайте логин и пароль, чтобы начать работу.'
-              : 'Войдите, чтобы работать с чатом и историей сессий.'}
+            {isRegister ? t('auth.registerHint') : t('auth.loginHint')}
           </p>
 
           <form onSubmit={submit} className="mt-6 flex flex-col gap-3.5">
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-ink-soft">Логин</span>
+              <span className="text-xs font-medium text-ink-soft">{t('auth.loginField')}</span>
               <input
                 ref={usernameRef}
                 type="text"
@@ -231,7 +228,7 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-ink-soft">Пароль</span>
+              <span className="text-xs font-medium text-ink-soft">{t('auth.passwordField')}</span>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -247,7 +244,7 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
                   onClick={() => setShowPassword((v) => !v)}
                   tabIndex={-1}
                   className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink-faint transition-colors hover:text-ink"
-                  aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -263,7 +260,7 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
             >
               <div className="min-h-0 overflow-hidden">
                 <label className="flex flex-col gap-1.5 pt-px">
-                  <span className="text-xs font-medium text-ink-soft">Повторите пароль</span>
+                  <span className="text-xs font-medium text-ink-soft">{t('auth.repeatPassword')}</span>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirm}
@@ -303,25 +300,25 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
               {submitting ? (
                 <>
                   <Spinner className="h-4 w-4" />
-                  <span>{isRegister ? 'Регистрируем…' : 'Входим…'}</span>
+                  <span>{isRegister ? t('auth.registering') : t('auth.loggingIn')}</span>
                 </>
               ) : isRegister ? (
-                'Зарегистрироваться'
+                t('auth.signUp')
               ) : (
-                'Войти'
+                t('auth.signIn')
               )}
             </button>
           </form>
 
           {/* Switch between sign in / sign up */}
           <div className="mt-5 text-[13px] text-ink-soft">
-            {isRegister ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
+            {isRegister ? t('auth.haveAccount') : t('auth.noAccount')}
             <button
               type="button"
               onClick={() => switchMode(isRegister ? 'login' : 'register')}
               className="font-medium text-ink underline-offset-2 transition-colors hover:underline"
             >
-              {isRegister ? 'Войти' : 'Зарегистрироваться'}
+              {isRegister ? t('auth.signIn') : t('auth.signUp')}
             </button>
           </div>
 
@@ -334,10 +331,10 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-line-strong hover:text-ink disabled:opacity-60"
             >
               <Sparkles className="h-4 w-4 text-ink-faint" strokeWidth={2} />
-              Посмотреть демо без регистрации
+              {t('auth.demoButton')}
             </button>
             <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">
-              Забыли логин или пароль? Обратитесь к администратору.
+              {t('auth.forgot')}
             </p>
           </div>
         </div>

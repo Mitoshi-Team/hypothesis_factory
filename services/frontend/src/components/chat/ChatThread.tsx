@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { Message } from '@/types'
+import { useI18n } from '@/lib/i18n'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from './EmptyState'
 import { UserMessage } from './UserMessage'
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function ChatThread({ messages, loading, authenticated, onExampleSelect, onLogin }: Props) {
+  const { t } = useI18n()
   const bottomRef = useRef<HTMLDivElement>(null)
   const last = messages[messages.length - 1]
 
@@ -26,7 +28,7 @@ export function ChatThread({ messages, loading, authenticated, onExampleSelect, 
       <div className="flex min-h-full items-center justify-center">
         <div className="flex animate-fade-in items-center gap-3 text-ink-faint">
           <Spinner className="h-5 w-5" />
-          <span className="text-[14px]">Загружаем историю чата…</span>
+          <span className="text-[14px]">{t('thread.loading')}</span>
         </div>
       </div>
     )

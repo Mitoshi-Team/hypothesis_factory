@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { FileUp, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 interface FileDropzoneProps {
   files: File[]
@@ -10,6 +11,7 @@ interface FileDropzoneProps {
 }
 
 export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzoneProps) {
+  const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -53,7 +55,7 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
           )}
         />
         <span className="text-sm font-medium text-ink">
-          Перетащите файлы или нажмите для выбора
+          {t('dropzone.prompt')}
         </span>
         {hint && <span className="text-xs text-ink-faint">{hint}</span>}
       </button>
@@ -83,7 +85,7 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
                 type="button"
                 onClick={() => removeFile(file.name)}
                 className="grid h-5 w-5 place-items-center rounded-md text-ink-faint transition-colors duration-150 hover:bg-red-50 hover:text-red-500"
-                aria-label={`Удалить ${file.name}`}
+                aria-label={t('dropzone.remove', { name: file.name })}
               >
                 <X className="h-3.5 w-3.5" />
               </button>

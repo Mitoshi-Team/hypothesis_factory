@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowUp, SlidersHorizontal } from 'lucide-react'
 import type { Weights } from '@/types'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 import { ContextTray, type ContextValue } from './ContextTray'
 
 export interface ComposerPayload {
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function Composer({ busy, threadKey, prefill, initialWeights, onSend }: Props) {
+  const { t } = useI18n()
   const emptyContext = (): ContextValue => ({
     constraints: '',
     weights: initialWeights,
@@ -122,8 +124,8 @@ export function Composer({ busy, threadKey, prefill, initialWeights, onSend }: P
         onChange={(e) => setProblem(e.target.value)}
         onKeyDown={onKeyDown}
         rows={1}
-        placeholder="Опишите технологическую проблему…"
-        aria-label="Технологическая проблема"
+        placeholder={t('composer.placeholder')}
+        aria-label={t('composer.problemAria')}
         className="scroll-slim block w-full resize-none bg-transparent px-4 pb-1 pt-3.5 text-[15px] leading-relaxed text-ink transition-[height] duration-[420ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] placeholder:text-ink-faint focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 will-change-[height]"
       />
 
@@ -133,7 +135,7 @@ export function Composer({ busy, threadKey, prefill, initialWeights, onSend }: P
           type="button"
           onClick={() => setTrayOpen((o) => !o)}
           aria-expanded={trayOpen}
-          aria-label="Контекст: ограничения, веса и файлы"
+          aria-label={t('composer.contextAria')}
           className={cn(
             'flex h-9 items-center gap-1.5 rounded-full pl-2.5 pr-3 text-[13px] font-medium transition-all duration-200 ease-out active:scale-[0.97]',
             trayOpen || contextCount > 0
@@ -147,7 +149,7 @@ export function Composer({ busy, threadKey, prefill, initialWeights, onSend }: P
               trayOpen && 'rotate-180',
             )}
           />
-          <span>Контекст</span>
+          <span>{t('composer.context')}</span>
           <span
             className={cn(
               'grid place-items-center overflow-hidden rounded-full bg-accent-500 text-[11px] font-semibold tabular-nums text-white transition-all duration-200 ease-out',
@@ -162,7 +164,7 @@ export function Composer({ busy, threadKey, prefill, initialWeights, onSend }: P
           type="button"
           onClick={submit}
           disabled={!canSend}
-          aria-label="Отправить"
+          aria-label={t('composer.send')}
           className={cn(
             'grid h-9 w-9 place-items-center rounded-full transition-all duration-200 ease-out active:scale-90',
             canSend

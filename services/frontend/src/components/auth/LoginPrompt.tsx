@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 interface Props {
   title: string
@@ -19,12 +20,13 @@ interface Props {
 export function LoginPrompt({
   title,
   description,
-  actionLabel = 'Войти',
+  actionLabel,
   compact = false,
   className,
   style,
   onLogin,
 }: Props) {
+  const { t } = useI18n()
   return (
     <div
       style={style}
@@ -58,7 +60,7 @@ export function LoginPrompt({
           compact ? 'px-4 py-2 text-[12.5px]' : 'px-4 py-2.5 text-[13.5px]',
         )}
       >
-        {actionLabel}
+        {actionLabel ?? t('common.signIn')}
       </button>
     </div>
   )
