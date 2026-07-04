@@ -10,11 +10,19 @@ interface Props {
   messages: Message[]
   loading?: boolean
   authenticated: boolean
+  sessionId?: string
   onExampleSelect: (text: string) => void
   onLogin: () => void
 }
 
-export function ChatThread({ messages, loading, authenticated, onExampleSelect, onLogin }: Props) {
+export function ChatThread({
+  messages,
+  loading,
+  authenticated,
+  sessionId,
+  onExampleSelect,
+  onLogin,
+}: Props) {
   const { t } = useI18n()
   const bottomRef = useRef<HTMLDivElement>(null)
   const last = messages[messages.length - 1]
@@ -51,7 +59,14 @@ export function ChatThread({ messages, loading, authenticated, onExampleSelect, 
           m.role === 'user' ? (
             <UserMessage key={m.id} content={m.content} files={m.files} />
           ) : (
-            <AssistantMessage key={m.id} status={m.status} result={m.result} error={m.error} />
+            <AssistantMessage
+              key={m.id}
+              status={m.status}
+              result={m.result}
+              error={m.error}
+              sessionId={sessionId}
+              isLast={m === last}
+            />
           ),
         )}
       </div>

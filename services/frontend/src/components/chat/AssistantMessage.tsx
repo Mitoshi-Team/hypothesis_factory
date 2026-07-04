@@ -9,9 +9,12 @@ interface Props {
   status: 'thinking' | 'done' | 'failed'
   result?: Result
   error?: string
+  sessionId?: string
+  /** Latest answer in the thread — only it exposes the graph button. */
+  isLast?: boolean
 }
 
-export function AssistantMessage({ status, result, error }: Props) {
+export function AssistantMessage({ status, result, error, sessionId, isLast }: Props) {
   const { t } = useI18n()
   return (
     <div className="flex gap-3">
@@ -35,7 +38,11 @@ export function AssistantMessage({ status, result, error }: Props) {
         ) : (
           <div className="animate-fade-in">
             <HypothesisResult result={result} />
-            <MessageActions result={result} />
+            <MessageActions
+              result={result}
+              sessionId={sessionId}
+              showGraph={isLast && sessionId?.startsWith('sess_')}
+            />
           </div>
         )}
       </div>
