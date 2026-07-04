@@ -26,6 +26,10 @@ docker compose up -d api_gateway
 
 ```bash
 cd services/api_gateway
+# Запуск через python-модуль (использует порт и хост из настроек)
+uv run python -m src.main
+
+# Или прямой запуск через uvicorn
 uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -36,20 +40,37 @@ uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 - `DATABASE_URL` — PostgreSQL через asyncpg.
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` — Redis.
 - `SECRET_KEY` — ключ для подписи JWT.
-- `UPLOAD_DIR` — директория для загружаемых файлов.
+- `ACCESS_TOKEN_EXPIRE_MINUTES` — время жизни JWT Access токена (по умолчанию 15 минут).
+- `REFRESH_TOKEN_EXPIRE_DAYS` — время жизни JWT Refresh токена (по умолчанию 7 дней).
+- `UPLOAD_DIR` — директория для загружаемых файлов пользователей.
+- `REPORT_DIR` — директория для хранения сгенерированных отчетов.
 - `ENVIRONMENT`, `DEBUG`, `HOST`, `PORT`, `CORS_ORIGINS`, `API_PREFIX`.
 
 ## Структура
 
 - `src/main.py` — точка входа FastAPI.
 - `src/config.py` — настройки.
-- `src/api/router.py` — маршруты API.
-- `src/api/schemas.py` — Pydantic-схемы.
-- `src/api/dependencies.py` — зависимости FastAPI.
-- `src/utils/exceptions.py` — кастомные исключения.
+- `src/api/router.py` — главный роутер.
+- `src/api/routes/` — разделенные маршруты API (auth, admin, sessions, results, tasks).
+- `src/api/schemas.py` — Pydantic-схемы запросов и ответов.
+- `src/api/dependencies.py` — зависимости FastAPI (БД, аутентификация, проверка прав).
+- `src/database/session.py` — асинхронные сессии базы данных.
+- `src/utils/auth.py` — хелперы для генерации и проверки JWT-токенов.
+- `src/utils/celery_client.py` — клиент Celery для отправки задач.
+- `src/utils/exceptions.py` — кастомные исключения и ошибки приложения.
 - `src/utils/log_config.py` — логирование.
+- `scripts/create_admin.py` — скрипт сидинга администратора.
 - `Dockerfile` — образ сервиса.
 - `tests/` — unit и integration тесты.
+
+## Инициализация базы данных
+
+Для создания первого администратора выполните скрипт инициализации:
+
+```bash
+cd services/api_gateway
+uv run python -m scripts.create_admin --username admin --password admin-password
+```
 
 ## Тесты
 

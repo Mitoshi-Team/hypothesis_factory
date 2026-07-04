@@ -24,3 +24,11 @@ class ValidationAppError(BaseAppError):
 
 class ServiceUnavailableError(BaseAppError):
     """Exception raised when a required downstream service is unavailable."""
+
+
+class UnauthorizedError(BaseAppError):
+    """Exception raised when user is not authenticated."""
+
+
+class ForbiddenError(BaseAppError):
+    """Exception raised when user is authenticated but not authorized."""

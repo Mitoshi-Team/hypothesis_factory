@@ -40,6 +40,46 @@ class Settings(BaseSettings):
     )
     API_PREFIX: str = Field(default="/api/v1", description="API route prefix")
 
+    # Database Settings
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://hypothesis-factory:hypothesis-factory@localhost:5432/hypothesis-factory",
+        description="PostgreSQL async database URL",
+    )
+
+    # Celery & Redis Settings
+    CELERY_BROKER_URL: str = Field(
+        default="redis://localhost:6379/0",
+        description="Celery broker URL",
+    )
+    CELERY_RESULT_BACKEND: str = Field(
+        default="redis://localhost:6379/0",
+        description="Celery result backend URL",
+    )
+
+    # Security Settings
+    SECRET_KEY: str = Field(
+        default="change-me-in-production",
+        description="Secret key for JWT generation and verification",
+    )
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=15,
+        description="Access token validity period in minutes",
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=7,
+        description="Refresh token validity period in days",
+    )
+
+    # File and Report Storage Settings
+    UPLOAD_DIR: str = Field(
+        default="/app/uploads",
+        description="Directory where user uploaded files are stored",
+    )
+    REPORT_DIR: str = Field(
+        default="/app/reports",
+        description="Directory where ML worker reports are stored",
+    )
+
 
 def get_settings() -> Settings:
     """Retrieve and cache the application settings.

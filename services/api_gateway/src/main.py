@@ -14,6 +14,8 @@ from src.config import get_settings
 from src.utils.exceptions import (
     BaseAppError,
     EntityNotFoundError,
+    ForbiddenError,
+    UnauthorizedError,
     ValidationAppError,
 )
 from src.utils.log_config import setup_logging
@@ -114,6 +116,32 @@ async def entity_not_found_handler(
         status_code=status.HTTP_404_NOT_FOUND,
         content=HTTPErrorResponse(
             error=ErrorDetail(code="NOT_FOUND", message=exc.message)
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(UnauthorizedError)
+async def unauthorized_handler(
+    request: Request, exc: UnauthorizedError
+) -> JSONResponse:
+    """Handle custom UnauthorizedError and return 401 response."""
+    logger.warning("Unauthorized access: %s", exc.message)
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content=HTTPErrorResponse(
+            error=ErrorDetail(code="UNAUTHORIZED", message=exc.message)
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(ForbiddenError)
+async def forbidden_handler(request: Request, exc: ForbiddenError) -> JSONResponse:
+    """Handle custom ForbiddenError and return 403 response."""
+    logger.warning("Forbidden access: %s", exc.message)
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content=HTTPErrorResponse(
+            error=ErrorDetail(code="FORBIDDEN", message=exc.message)
         ).model_dump(),
     )
 
