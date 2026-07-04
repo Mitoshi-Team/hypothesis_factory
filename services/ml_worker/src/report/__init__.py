@@ -86,7 +86,7 @@ async def save_report(
     report_dir = Path(settings.report_dir) / session_id
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    data = output.model_dump(exclude={"trace"})
+    data = output.model_dump()
 
     json_path = report_dir / f"{message_id}.json"
     json_path.write_text(

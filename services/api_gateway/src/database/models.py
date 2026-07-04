@@ -224,6 +224,7 @@ class PipelineResult(Base):
     hypothesis_json: Mapped[str] = mapped_column(Text, nullable=False)
     review_json: Mapped[str] = mapped_column(Text, nullable=False)
     graph_json: Mapped[str] = mapped_column(Text, nullable=False)
+    trace_json: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
     # Relationships
     session: Mapped["Session"] = relationship(back_populates="pipeline_results")

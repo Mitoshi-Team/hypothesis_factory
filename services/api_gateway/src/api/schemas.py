@@ -228,13 +228,31 @@ class HypothesisReview(BaseModel):
     suggestions: List[str] = Field(..., description="Improvements suggestions")
 
 
+class SourceRef(BaseModel):
+    """Reference to a source document chunk."""
+
+    chunk_id: str = Field(..., description="Source chunk identifier")
+    element_id: Optional[str] = Field(
+        default=None, description="Source document element identifier"
+    )
+    text: Optional[str] = Field(default=None, description="Source chunk text")
+    document_title: Optional[str] = Field(
+        default=None, description="Title of the source document"
+    )
+    section_path: Optional[str] = Field(
+        default=None, description="Section path within the source document"
+    )
+
+
 class GraphNode(BaseModel):
     """Knowledge graph entity node."""
 
     id: str = Field(..., description="Node unique ID")
     label: str = Field(..., description="Type: Material, Process, Property...")
     name: str = Field(..., description="Normalized entity name")
-    source_chunks: List[str] = Field(default_factory=list, description="Source chunks")
+    source_chunks: List[SourceRef] = Field(
+        default_factory=list, description="Source chunk references"
+    )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Metadata dictionary"
     )

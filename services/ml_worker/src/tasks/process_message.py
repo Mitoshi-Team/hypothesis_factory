@@ -210,6 +210,9 @@ def _persist_result(
             graph_json=(
                 result.graph.model_dump_json() if result.graph else "{}"
             ),
+            trace_json=(
+                result.trace.model_dump_json() if result.trace else "{}"
+            ),
         )
     )
 

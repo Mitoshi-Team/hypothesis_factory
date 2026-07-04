@@ -106,6 +106,7 @@ API Gateway и ml_worker используют общую PostgreSQL. Ниже м
 | `hypothesis_json` | text | JSON гипотезы |
 | `review_json` | text | JSON ревью |
 | `graph_json` | text | JSON графа |
+| `trace_json` | text | JSON трассировки pipeline |
 | `created_at` | datetime | Время создания |
 
 ## Коды ошибок
@@ -451,7 +452,21 @@ API Gateway и ml_worker используют общую PostgreSQL. Ниже м
 ```json
 {
   "nodes": [
-    {"id": "ent_abc", "label": "Material", "name": "ниобий", "source_chunks": [], "metadata": {}}
+    {
+      "id": "ent_abc",
+      "label": "Material",
+      "name": "ниобий",
+      "source_chunks": [
+        {
+          "chunk_id": "chunk_001",
+          "element_id": "el_001",
+          "text": "...",
+          "document_title": "...",
+          "section_path": "..."
+        }
+      ],
+      "metadata": {}
+    }
   ],
   "edges": [
     {"source": "ent_abc", "target": "ent_def", "relation": "influences", "confidence": 0.9, "metadata": {}}
@@ -461,6 +476,16 @@ API Gateway и ml_worker используют общую PostgreSQL. Ниже м
   ]
 }
 ```
+
+#### SourceRef
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `chunk_id` | string | ID исходного чанка |
+| `element_id` | string | ID элемента документа |
+| `text` | string | Текст чанка |
+| `document_title` | string | Название документа |
+| `section_path` | string | Путь раздела в документе |
 
 ### Типы узлов (node.label)
 
