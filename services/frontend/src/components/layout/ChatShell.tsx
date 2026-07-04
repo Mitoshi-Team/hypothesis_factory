@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Menu, X } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { BrandMark } from '@/components/sidebar/BrandMark'
 
 interface ChatShellProps {
   sidebar: ReactNode
@@ -11,14 +10,38 @@ interface ChatShellProps {
 
 export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-bg text-ink">
-      <aside className="hidden w-[264px] shrink-0 border-r border-line bg-panel md:block">
-        {sidebar}
-      </aside>
+      {/* Desktop floating sidebar */}
+      <div
+        className={cn(
+          'relative hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-out md:block',
+          sidebarOpen ? 'w-[288px]' : 'w-0',
+        )}
+      >
+        <aside
+          className={cn(
+            'absolute inset-y-0 left-0 w-[288px] p-3 pr-0 transition-transform duration-300 ease-out',
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+        >
+          <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="absolute right-3 top-2.5 z-10 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink"
+              aria-label="Скрыть меню"
+            >
+              <PanelLeftClose className="h-[18px] w-[18px]" />
+            </button>
+            {sidebar}
+          </div>
+        </aside>
+      </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — fullscreen floating panel */}
       <div
         className={cn('fixed inset-0 z-40 md:hidden', !drawerOpen && 'pointer-events-none')}
         aria-hidden={!drawerOpen}
@@ -32,28 +55,52 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
         />
         <div
           className={cn(
-            'absolute inset-y-0 left-0 w-[84%] max-w-[300px] border-r border-line bg-panel shadow-pop transition-transform duration-200 ease-out',
+            'absolute inset-0 transform-gpu p-3 transition-transform duration-300 ease-out will-change-transform',
             drawerOpen ? 'translate-x-0' : '-translate-x-full',
           )}
-          onClick={() => setDrawerOpen(false)}
         >
-          {sidebar}
+          <div
+            className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop"
+            onClick={() => setDrawerOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="absolute right-3 top-2.5 z-10 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink"
+              aria-label="Скрыть меню"
+            >
+              <PanelLeftClose className="h-[18px] w-[18px]" />
+            </button>
+            {sidebar}
+          </div>
         </div>
       </div>
 
       <div className="relative flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar */}
-        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-bg/90 px-3 backdrop-blur md:hidden">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="rounded-lg p-2 text-ink-soft hover:bg-panel"
-            aria-label="Меню"
-          >
-            {drawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-          <BrandMark />
-        </div>
+        {/* Desktop reopen button */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className={cn(
+            'absolute left-3 top-[22px] z-20 hidden h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn transition-all duration-300 hover:text-ink md:grid',
+            sidebarOpen
+              ? 'pointer-events-none -translate-x-3 opacity-0'
+              : 'translate-x-0 opacity-100',
+          )}
+          aria-label="Показать меню"
+        >
+          <PanelLeftOpen className="h-[18px] w-[18px]" />
+        </button>
+
+        {/* Mobile open button */}
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className="absolute left-3 top-[22px] z-20 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink md:hidden"
+          aria-label="Показать меню"
+        >
+          <PanelLeftOpen className="h-[18px] w-[18px]" />
+        </button>
 
         <div className="min-h-0 flex-1 overflow-y-auto scroll-slim">{children}</div>
 
