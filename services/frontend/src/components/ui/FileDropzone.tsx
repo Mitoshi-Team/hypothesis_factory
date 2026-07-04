@@ -42,7 +42,7 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
           'flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-7 text-center transition-all duration-200 ease-out active:scale-[0.99]',
           dragging
             ? 'scale-[1.01] border-accent-200 bg-accent-50'
-            : 'border-line-strong bg-bg hover:border-accent-200 hover:bg-accent-50/60',
+            : 'border-line-strong bg-panel hover:border-accent-200 hover:bg-accent-50/60',
         )}
       >
         <FileUp
