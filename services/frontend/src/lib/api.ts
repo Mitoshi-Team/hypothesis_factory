@@ -5,6 +5,7 @@
 
 import type { HypothesisResult, Message, Session, User, Weights } from '@/types'
 import { DEFAULT_WEIGHTS } from '@/types'
+import { t } from '@/lib/lang'
 import {
   DEMO_PASSWORD,
   DEMO_SENTINEL,
@@ -63,11 +64,10 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   UNKNOWN: 'Что-то пошло не так. Попробуйте ещё раз.',
 }
 
-/** A short, user-facing Russian description for any thrown error. */
+/** A short, user-facing description (in the current language) for any error. */
 export function humanizeError(e: unknown): string {
-  if (e instanceof ApiError) return e.message || ERROR_MESSAGES[e.code]
-  if (e instanceof Error && e.message) return ERROR_MESSAGES.UNKNOWN
-  return ERROR_MESSAGES.UNKNOWN
+  if (e instanceof ApiError) return t(`err.${e.code}`)
+  return t('err.UNKNOWN')
 }
 
 async function toApiError(res: Response): Promise<ApiError> {
@@ -316,7 +316,7 @@ function mapResult(hypothesis?: ApiHypothesis, review?: ApiReview): HypothesisRe
   const h = hypothesis ?? {}
   const r = review ?? {}
   return {
-    title: h.title ?? 'Гипотеза',
+    title: h.title ?? t('result.hypothesisLabel'),
     hypothesis: h.hypothesis ?? '',
     expectedEffect: h.expected_effect ?? '',
     scores: {

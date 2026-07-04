@@ -2,30 +2,31 @@ import { useState, type ReactNode } from 'react'
 import { Check, Copy, Download } from 'lucide-react'
 import type { HypothesisResult } from '@/types'
 import { cn } from '@/lib/cn'
-import { CRITERIA_LABELS, verdictLabel } from '@/lib/format'
+import { CRITERIA_KEYS, criteriaLabel, verdictLabel } from '@/lib/format'
+import { t } from '@/lib/lang'
+import { useI18n } from '@/lib/i18n'
 import { SaveModal } from './SaveModal'
 
 function resultToText(r: HypothesisResult): string {
-  const scores = (Object.keys(CRITERIA_LABELS) as Array<keyof typeof r.scores>)
-    .map((k) => `${CRITERIA_LABELS[k]} ${r.scores[k].toFixed(1)}`)
-    .join(' · ')
+  const scores = CRITERIA_KEYS.map((k) => `${criteriaLabel(k)} ${r.scores[k].toFixed(1)}`).join(' · ')
   const lines = [
     r.title,
     `${scores} · ${verdictLabel(r.verdict)}`,
     '',
-    `Гипотеза: ${r.hypothesis}`,
-    `Ожидаемый эффект: ${r.expectedEffect}`,
+    `${t('result.hypothesisLabel')}: ${r.hypothesis}`,
+    `${t('result.expectedEffect')}: ${r.expectedEffect}`,
     '',
-    'Риски:',
+    `${t('result.risks')}:`,
     ...r.risks.map((x) => `— ${x}`),
   ]
   if (r.suggestions.length) {
-    lines.push('', 'Что проверить дальше:', ...r.suggestions.map((x) => `— ${x}`))
+    lines.push('', `${t('result.nextChecks')}:`, ...r.suggestions.map((x) => `— ${x}`))
   }
   return lines.join('\n')
 }
 
 export function MessageActions({ result }: { result: HypothesisResult }) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
 
@@ -48,11 +49,11 @@ export function MessageActions({ result }: { result: HypothesisResult }) {
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
-          {copied ? 'Скопировано' : 'Копировать'}
+          {copied ? t('actions.copied') : t('actions.copy')}
         </ActionButton>
         <ActionButton onClick={() => setSaveOpen(true)}>
           <Download className="h-3.5 w-3.5" />
-          Скачать
+          {t('actions.download')}
         </ActionButton>
       </div>
 

@@ -2,7 +2,8 @@ import { jsPDF } from 'jspdf'
 import { BorderStyle, Document, Packer, Paragraph, TextRun } from 'docx'
 import { saveAs } from 'file-saver'
 import type { HypothesisResult } from '@/types'
-import { CRITERIA_LABELS, reportFileName, verdictLabel } from './format'
+import { t } from '@/lib/lang'
+import { CRITERIA_KEYS, criteriaLabel, reportFileName, verdictLabel } from './format'
 
 const ACCENT: [number, number, number] = [46, 107, 240]
 const INK: [number, number, number] = [28, 29, 31]
@@ -17,9 +18,7 @@ async function ensureFonts(doc: jsPDF) {
 }
 
 function scoreLine(r: HypothesisResult): string {
-  return (Object.keys(CRITERIA_LABELS) as Array<keyof typeof r.scores>)
-    .map((k) => `${CRITERIA_LABELS[k]} ${r.scores[k].toFixed(1)}`)
-    .join('     ')
+  return CRITERIA_KEYS.map((k) => `${criteriaLabel(k)} ${r.scores[k].toFixed(1)}`).join('     ')
 }
 
 export async function exportResultToPdf(result: HypothesisResult): Promise<void> {
@@ -78,8 +77,8 @@ export async function exportResultToPdf(result: HypothesisResult): Promise<void>
     paragraph(text, { size: 9, bold: true, color: ACCENT, lineHeight: 5, gapAfter: 1.5 })
   }
 
-  paragraph('Фабрика гипотез', { size: 20, bold: true, lineHeight: 9, gapAfter: 1 })
-  paragraph('Отчёт по гипотезе', { size: 11, color: MUTED, lineHeight: 5, gapAfter: 3 })
+  paragraph(t('doc.appTitle'), { size: 20, bold: true, lineHeight: 9, gapAfter: 1 })
+  paragraph(t('doc.reportSubtitle'), { size: 11, color: MUTED, lineHeight: 5, gapAfter: 3 })
   rule()
 
   paragraph(result.title, { size: 14, bold: true, lineHeight: 7, gapAfter: 2 })
@@ -90,23 +89,23 @@ export async function exportResultToPdf(result: HypothesisResult): Promise<void>
     gapAfter: 3,
   })
 
-  sectionTitle('Гипотеза')
+  sectionTitle(t('result.hypothesisLabel'))
   paragraph(result.hypothesis, { size: 10.5, lineHeight: 5.6, gapAfter: 3 })
 
-  sectionTitle('Ожидаемый эффект')
+  sectionTitle(t('result.expectedEffect'))
   paragraph(result.expectedEffect, { size: 10.5, lineHeight: 5.6, gapAfter: 3 })
 
-  sectionTitle('Риски')
+  sectionTitle(t('result.risks'))
   for (const r of result.risks) paragraph(`•  ${r}`, { size: 10, lineHeight: 5.4, indent: 2 })
   y += 2
 
   if (result.suggestions.length > 0) {
-    sectionTitle('Рекомендации по проверке')
+    sectionTitle(t('result.nextChecks'))
     for (const s of result.suggestions) paragraph(`•  ${s}`, { size: 10, lineHeight: 5.4, indent: 2 })
     y += 2
   }
 
-  sectionTitle('Источники')
+  sectionTitle(t('result.sources'))
   for (const s of result.evidenceSources) paragraph(`•  ${s}`, { size: 9.5, lineHeight: 5, indent: 2 })
 
   doc.save(reportFileName(result.title, 'pdf'))
@@ -139,13 +138,13 @@ export async function exportResultToDocx(result: HypothesisResult): Promise<void
           new Paragraph({
             spacing: { after: 40 },
             children: [
-              new TextRun({ text: 'Фабрика гипотез', bold: true, size: 40, color: '1C1D1F', font: FONT }),
+              new TextRun({ text: t('doc.appTitle'), bold: true, size: 40, color: '1C1D1F', font: FONT }),
             ],
           }),
           new Paragraph({
             border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E4E6', space: 8 } },
             spacing: { after: 160 },
-            children: [new TextRun({ text: 'Отчёт по гипотезе', size: 22, color: '63666B', font: FONT })],
+            children: [new TextRun({ text: t('doc.reportSubtitle'), size: 22, color: '63666B', font: FONT })],
           }),
 
           new Paragraph({
@@ -164,26 +163,26 @@ export async function exportResultToDocx(result: HypothesisResult): Promise<void
             ],
           }),
 
-          sectionHeading('Гипотеза'),
+          sectionHeading(t('result.hypothesisLabel')),
           new Paragraph({
             spacing: { after: 120 },
             children: [new TextRun({ text: result.hypothesis, size: 22, font: FONT })],
           }),
 
-          sectionHeading('Ожидаемый эффект'),
+          sectionHeading(t('result.expectedEffect')),
           new Paragraph({
             spacing: { after: 120 },
             children: [new TextRun({ text: result.expectedEffect, size: 22, font: FONT })],
           }),
 
-          sectionHeading('Риски'),
+          sectionHeading(t('result.risks')),
           ...result.risks.map(bullet),
 
           ...(result.suggestions.length > 0
-            ? [sectionHeading('Рекомендации по проверке'), ...result.suggestions.map(bullet)]
+            ? [sectionHeading(t('result.nextChecks')), ...result.suggestions.map(bullet)]
             : []),
 
-          sectionHeading('Источники'),
+          sectionHeading(t('result.sources')),
           ...result.evidenceSources.map(bullet),
         ],
       },

@@ -1,29 +1,27 @@
 import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
-const STEPS = [
-  'Извлекаю сущности и связи',
-  'Ищу пробелы в знаниях',
-  'Формирую гипотезу по аналогиям',
-  'Оцениваю новизну и риски',
-]
+const STEP_KEYS = ['thinking.0', 'thinking.1', 'thinking.2', 'thinking.3']
 
 const STEP_INTERVAL_MS = 560
 
 export function ThinkingTrace() {
+  const { t } = useI18n()
   const [current, setCurrent] = useState(0)
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrent((c) => (c < STEPS.length - 1 ? c + 1 : c))
+      setCurrent((c) => (c < STEP_KEYS.length - 1 ? c + 1 : c))
     }, STEP_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [])
 
   return (
     <ul className="flex flex-col gap-2 py-1">
-      {STEPS.map((step, i) => {
+      {STEP_KEYS.map((key, i) => {
+        const step = t(key)
         const done = i < current
         const activeStep = i === current
         return (

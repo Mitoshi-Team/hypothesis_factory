@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, FileType, X } from 'lucide-react'
 import type { HypothesisResult } from '@/types'
+import { useI18n } from '@/lib/i18n'
 import { Spinner } from '@/components/ui/Spinner'
 
 interface SaveModalProps {
@@ -9,11 +10,12 @@ interface SaveModalProps {
 }
 
 const FORMATS = [
-  { key: 'pdf' as const, label: 'PDF', icon: FileText, hint: 'Свёрстанный документ для печати' },
-  { key: 'docx' as const, label: 'DOCX', icon: FileType, hint: 'Редактируемый документ Word' },
+  { key: 'pdf' as const, label: 'PDF', icon: FileText, hintKey: 'save.pdfHint' },
+  { key: 'docx' as const, label: 'DOCX', icon: FileType, hintKey: 'save.docxHint' },
 ]
 
 export function SaveModal({ result, onClose }: SaveModalProps) {
+  const { t } = useI18n()
   const [busy, setBusy] = useState<null | 'pdf' | 'docx'>(null)
 
   useEffect(() => {
@@ -39,28 +41,28 @@ export function SaveModal({ result, onClose }: SaveModalProps) {
       className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
-      aria-label="Скачать гипотезу"
+      aria-label={t('save.title')}
     >
       <div className="absolute inset-0 bg-ink/25 animate-fade-in" onClick={onClose} />
 
       <div className="relative w-full max-w-sm rounded-2xl border border-line bg-card p-5 shadow-pop animate-fade-up">
         <div className="mb-1 flex items-start justify-between">
           <div>
-            <h2 className="text-[15px] font-semibold text-ink">Скачать гипотезу</h2>
-            <p className="mt-0.5 text-[13px] text-ink-soft">Выберите формат</p>
+            <h2 className="text-[15px] font-semibold text-ink">{t('save.title')}</h2>
+            <p className="mt-0.5 text-[13px] text-ink-soft">{t('save.chooseFormat')}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="-mr-1 -mt-1 rounded-lg p-1.5 text-ink-faint hover:bg-panel hover:text-ink"
-            aria-label="Закрыть"
+            aria-label={t('save.close')}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="mt-4 flex flex-col gap-2">
-          {FORMATS.map(({ key, label, icon: Icon, hint }) => (
+          {FORMATS.map(({ key, label, icon: Icon, hintKey }) => (
             <button
               key={key}
               type="button"
@@ -73,7 +75,7 @@ export function SaveModal({ result, onClose }: SaveModalProps) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-ink">{label}</span>
-                <span className="block text-xs text-ink-soft">{hint}</span>
+                <span className="block text-xs text-ink-soft">{t(hintKey)}</span>
               </span>
             </button>
           ))}

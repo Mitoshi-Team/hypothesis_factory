@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 interface ChatShellProps {
   sidebar: ReactNode
@@ -9,6 +10,7 @@ interface ChatShellProps {
 }
 
 export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
+  const { t } = useI18n()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
@@ -32,7 +34,7 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
               type="button"
               onClick={() => setSidebarOpen(false)}
               className="absolute right-3 top-2.5 z-10 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink"
-              aria-label="Скрыть меню"
+              aria-label={t("sidebar.hideMenu")}
             >
               <PanelLeftClose className="h-[18px] w-[18px]" />
             </button>
@@ -67,7 +69,7 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
               type="button"
               onClick={() => setDrawerOpen(false)}
               className="absolute right-3 top-2.5 z-10 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink"
-              aria-label="Скрыть меню"
+              aria-label={t("sidebar.hideMenu")}
             >
               <PanelLeftClose className="h-[18px] w-[18px]" />
             </button>
@@ -89,7 +91,7 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
                 ? 'pointer-events-none -translate-x-3 opacity-0'
                 : 'translate-x-0 opacity-100',
             )}
-            aria-label="Показать меню"
+            aria-label={t("sidebar.showMenu")}
           >
             <PanelLeftOpen className="h-[18px] w-[18px]" />
           </button>
@@ -99,7 +101,7 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="absolute left-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink md:hidden"
-            aria-label="Показать меню"
+            aria-label={t("sidebar.showMenu")}
           >
             <PanelLeftOpen className="h-[18px] w-[18px]" />
           </button>
