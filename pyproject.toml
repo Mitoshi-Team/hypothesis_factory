@@ -24,8 +24,11 @@ dev = [
 
 
 [tool.ruff]
-src = ["src"]
-target-version = "py312"
+src = [
+    "services/api_gateway/src",
+    "services/ml_worker/src",
+]
+target-version = "py313"
 line-length = 79
 indent-width = 4
 exclude = [
@@ -45,8 +48,9 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+"services/api_gateway/tests/**" = ["S101", "E501"]
 "services/ml_worker/tests/**" = ["S101", "E501"]
-"src/ai_pipeline/**" = ["E501"]
+"services/ml_worker/src/ai_pipeline/**" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

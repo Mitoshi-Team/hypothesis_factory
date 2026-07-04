@@ -16,7 +16,7 @@ repos:
         types: [python]
       - id: mdformat
         name: mdformat
-        entry: mdformat --check
+        entry: mdformat --check --number
         language: system
         types: [markdown]
 
