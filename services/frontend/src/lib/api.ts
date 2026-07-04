@@ -218,6 +218,23 @@ export async function login(username: string, password: string): Promise<User> {
   return { username }
 }
 
+/**
+ * Register a new account, then sign in with the same credentials.
+ *
+ * NOTE: `POST /auth/users` is not in the API contract yet — it's the agreed
+ * future endpoint for self-service registration. Once the backend ships it,
+ * this works as-is. We always follow up with `login` so it doesn't matter
+ * whether registration itself returns tokens.
+ */
+export async function register(username: string, password: string): Promise<User> {
+  await request('/auth/users', {
+    method: 'POST',
+    json: { username, password },
+    auth: false,
+  })
+  return login(username, password)
+}
+
 export function logout(): void {
   clearAuthTokens()
 }
