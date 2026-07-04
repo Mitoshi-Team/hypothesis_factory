@@ -64,6 +64,11 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(14px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // Slow diagonal drift of an oversized gradient for a living backdrop
+        'gradient-shift': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.35s ease-out both',
@@ -71,6 +76,7 @@ export default {
         shake: 'shake 0.4s ease-in-out',
         float: 'float 9s ease-in-out infinite',
         'rise-in': 'rise-in 0.5s cubic-bezier(0.22,1,0.36,1) both',
+        gradient: 'gradient-shift 14s ease-in-out infinite',
       },
     },
   },
