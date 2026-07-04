@@ -3,14 +3,16 @@
 // the unified `{ error: { code, message, details } }` envelope and
 // long-polling of pipeline results.
 
-import type { HypothesisResult, Message, Session, User, Weights } from '@/types'
+import type { HypothesisResult, KnowledgeGraph, Message, Session, User, Weights } from '@/types'
 import { DEFAULT_WEIGHTS } from '@/types'
 import { t } from '@/lib/lang'
+import { mapGraph, type ApiGraph } from '@/lib/graph'
 import {
   DEMO_PASSWORD,
   DEMO_SENTINEL,
   DEMO_USERNAME,
   demoCreateSession,
+  demoGraph,
   demoMessageId,
   demoResult,
   demoSessionDetail,
@@ -453,6 +455,21 @@ export async function fetchResult(sessionId: string, messageId: string): Promise
   }
   if (data.status === 'failed') return { state: 'failed' }
   return { state: 'done', result: mapResult(data.hypothesis, data.review) }
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge graph
+
+/**
+ * Fetch the knowledge graph for the session's latest result. Loaded lazily
+ * (only when the user opens the graph panel) because the payload embeds full
+ * source-chunk text and can be several megabytes.
+ */
+export async function fetchGraph(sessionId: string): Promise<KnowledgeGraph> {
+  if (isDemo()) return demoGraph()
+  const res = await request(`/sessions/${sessionId}/graph`)
+  const data: ApiGraph = await res.json()
+  return mapGraph(data)
 }
 
 const POLL_INTERVAL_MS = 2500
