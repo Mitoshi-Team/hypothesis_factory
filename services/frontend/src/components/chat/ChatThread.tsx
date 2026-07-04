@@ -1,15 +1,19 @@
 import { useEffect, useRef } from 'react'
 import type { Message } from '@/types'
+import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from './EmptyState'
 import { UserMessage } from './UserMessage'
 import { AssistantMessage } from './AssistantMessage'
 
 interface Props {
   messages: Message[]
+  loading?: boolean
+  authenticated: boolean
   onExampleSelect: (text: string) => void
+  onLogin: () => void
 }
 
-export function ChatThread({ messages, onExampleSelect }: Props) {
+export function ChatThread({ messages, loading, authenticated, onExampleSelect, onLogin }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const last = messages[messages.length - 1]
 
@@ -17,8 +21,25 @@ export function ChatThread({ messages, onExampleSelect }: Props) {
     bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
   }, [messages.length, last])
 
+  if (loading && messages.length === 0) {
+    return (
+      <div className="flex min-h-full items-center justify-center">
+        <div className="flex animate-fade-in items-center gap-3 text-ink-faint">
+          <Spinner className="h-5 w-5" />
+          <span className="text-[14px]">Загружаем историю чата…</span>
+        </div>
+      </div>
+    )
+  }
+
   if (messages.length === 0) {
-    return <EmptyState onSelect={onExampleSelect} />
+    return (
+      <EmptyState
+        authenticated={authenticated}
+        onSelect={onExampleSelect}
+        onLogin={onLogin}
+      />
+    )
   }
 
   return (
@@ -28,7 +49,7 @@ export function ChatThread({ messages, onExampleSelect }: Props) {
           m.role === 'user' ? (
             <UserMessage key={m.id} content={m.content} files={m.files} />
           ) : (
-            <AssistantMessage key={m.id} status={m.status} result={m.result} />
+            <AssistantMessage key={m.id} status={m.status} result={m.result} error={m.error} />
           ),
         )}
       </div>

@@ -8,7 +8,7 @@ const WEIGHT_KEYS: Array<keyof Weights> = ['novelty', 'feasibility', 'effect', '
 export interface ContextValue {
   constraints: string
   weights: Weights
-  files: string[]
+  files: File[]
 }
 
 interface Props {

@@ -3,8 +3,8 @@ import { FileUp, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface FileDropzoneProps {
-  files: string[]
-  onFilesChange: (files: string[]) => void
+  files: File[]
+  onFilesChange: (files: File[]) => void
   accept?: string
   hint?: string
 }
@@ -15,12 +15,13 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
 
   const addFiles = (list: FileList | null) => {
     if (!list) return
-    const names = Array.from(list).map((f) => f.name)
-    onFilesChange([...new Set([...files, ...names])])
+    const existing = new Set(files.map((f) => f.name))
+    const added = Array.from(list).filter((f) => !existing.has(f.name))
+    if (added.length > 0) onFilesChange([...files, ...added])
   }
 
   const removeFile = (name: string) => {
-    onFilesChange(files.filter((f) => f !== name))
+    onFilesChange(files.filter((f) => f.name !== name))
   }
 
   return (
@@ -63,22 +64,26 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
         multiple
         accept={accept}
         className="hidden"
-        onChange={(e) => addFiles(e.target.files)}
+        onChange={(e) => {
+          addFiles(e.target.files)
+          // Allow re-selecting the same file after removal.
+          e.target.value = ''
+        }}
       />
 
       {files.length > 0 && (
         <ul className="flex flex-wrap gap-2">
-          {files.map((name) => (
+          {files.map((file) => (
             <li
-              key={name}
+              key={file.name}
               className="inline-flex animate-fade-up items-center gap-1.5 rounded-lg border border-line bg-card py-1 pl-2.5 pr-1.5 text-xs text-ink-soft"
             >
-              <span className="max-w-[180px] truncate">{name}</span>
+              <span className="max-w-[180px] truncate">{file.name}</span>
               <button
                 type="button"
-                onClick={() => removeFile(name)}
+                onClick={() => removeFile(file.name)}
                 className="grid h-5 w-5 place-items-center rounded-md text-ink-faint transition-colors duration-150 hover:bg-red-50 hover:text-red-500"
-                aria-label={`Удалить ${name}`}
+                aria-label={`Удалить ${file.name}`}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
