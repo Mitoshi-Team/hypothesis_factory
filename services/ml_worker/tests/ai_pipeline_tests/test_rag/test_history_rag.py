@@ -127,7 +127,7 @@ class TestHistoryRAG:
             mock.assert_called_once_with(
                 query_text="test",
                 n_results=0,
-                where={"type": "history", "user_id": "alice"},
+                where={"$and": [{"type": "history"}, {"user_id": "alice"}]},
             )
 
     def test_retrieve_without_user_id_passes_type_where(self):

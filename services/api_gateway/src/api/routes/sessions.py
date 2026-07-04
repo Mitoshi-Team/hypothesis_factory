@@ -1,6 +1,7 @@
 """Sessions and Messages API routes."""
 
 import datetime
+import json
 import os
 import uuid
 from typing import List, Optional
@@ -51,7 +52,6 @@ async def create_session(
 ) -> SessionResponse:
     """Initialize a new research session with KPI weights and constraints."""
     session_id = f"sess_{uuid.uuid4().hex[:12]}"
-    import datetime
 
     new_session = SessionORM(
         id=session_id,
@@ -276,7 +276,6 @@ async def submit_message(
 
     # 1. Create User Message ORM record
     user_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-    import datetime
 
     user_message = MessageORM(
         id=user_msg_id,
