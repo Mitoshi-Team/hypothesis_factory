@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Eye, EyeOff, LockKeyhole, UserPlus } from 'lucide-react'
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  FlaskConical,
+  History,
+  Layers,
+  Sparkles,
+} from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth'
 import { humanizeError, ApiError } from '@/lib/api'
@@ -14,10 +22,19 @@ interface Props {
 
 type Mode = 'login' | 'register'
 
+const PERKS = [
+  { icon: History, text: 'История сессий всегда под рукой' },
+  { icon: Layers, text: 'Итеративная работа над гипотезой' },
+  { icon: Sparkles, text: 'Оценка по критериям и рискам' },
+]
+
 /**
- * Full-page auth screen shown on the `/auth` route. Always mounted so the
- * swap with the chat is a pure cross-fade — the chat recedes, this glides in,
- * no modal, no backdrop blur, no remounts.
+ * Full-page auth screen shown on the `/auth` route. Always mounted so the swap
+ * with the chat is a pure transition — no modal, no backdrop blur, no remounts.
+ *
+ * Layout is a split: a branded accent panel on the left and the form on the
+ * right. The two halves slide in from opposite screen edges and meet in the
+ * middle ("shutters closing" over the chat), then part again on exit.
  */
 export function AuthPage({ active, onClose, onSuccess }: Props) {
   const { login, register } = useAuth()
@@ -40,7 +57,7 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
     setConfirm('')
     setSubmitting(false)
     // Focus after the enter transition starts, so the ring doesn't flash.
-    const t = setTimeout(() => usernameRef.current?.focus(), 250)
+    const t = setTimeout(() => usernameRef.current?.focus(), 400)
     return () => clearTimeout(t)
   }, [active])
 
@@ -94,171 +111,240 @@ export function AuthPage({ active, onClose, onSuccess }: Props) {
     }
   }
 
+  // Minimal fields — a quiet underline-style focus in ink, no accent ring.
   const inputClass =
-    'w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-200 focus:border-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-500/20'
+    'w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-faint transition-colors duration-200 focus:border-ink focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0'
 
   return (
     <div
       className={cn(
-        'absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-bg p-4 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
-        active
-          ? 'visible translate-y-0 scale-100 opacity-100'
-          : 'invisible pointer-events-none translate-y-3 scale-[0.98] opacity-0',
+        // `visibility` transitions with a delay so it only flips to hidden
+        // AFTER the panels finish sliding back out on close.
+        'absolute inset-0 z-40 flex overflow-hidden transition-[visibility] duration-[650ms]',
+        active ? 'visible' : 'invisible pointer-events-none',
       )}
       aria-hidden={!active}
       role="region"
       aria-label={isRegister ? 'Регистрация' : 'Авторизация'}
     >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute left-4 top-4 flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink-soft transition-colors hover:bg-panel hover:text-ink"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        К чату
-      </button>
-
-      <div
-        onAnimationEnd={(e) => {
-          if (e.target === e.currentTarget) setShaking(false)
-        }}
+      {/* ---- Left brand panel (desktop only) — slides in from the left ---- */}
+      <aside
         className={cn(
-          'w-full max-w-[400px] rounded-3xl border border-line bg-card p-7 shadow-pop',
-          shaking && active && 'animate-shake',
+          'relative hidden w-[44%] shrink-0 overflow-hidden bg-accent-600 text-white transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:flex md:flex-col',
+          active ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent-50 text-accent-600">
-          {isRegister ? (
-            <UserPlus className="h-5 w-5" strokeWidth={2} />
-          ) : (
-            <LockKeyhole className="h-5 w-5" strokeWidth={2} />
+        {/* Gradient wash + drifting glows */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-500 via-accent-600 to-accent-700" />
+        <div className="pointer-events-none absolute -left-24 -top-20 h-80 w-80 rounded-full bg-white/15 blur-3xl animate-float" />
+        <div
+          className="pointer-events-none absolute -bottom-28 right-[-10%] h-96 w-96 rounded-full bg-accent-200/25 blur-3xl animate-float"
+          style={{ animationDelay: '1.5s' }}
+        />
+        {/* Subtle dot grid */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)',
+            backgroundSize: '22px 22px',
+          }}
+        />
+
+        <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 backdrop-blur-sm">
+              <FlaskConical className="h-5 w-5" strokeWidth={2} />
+            </span>
+            <span className="text-[15px] font-semibold tracking-tight">Фабрика гипотез</span>
+          </div>
+
+          <div
+            className={cn('max-w-sm', active && 'animate-rise-in')}
+            style={{ animationDelay: '250ms' }}
+          >
+            <h1 className="text-[30px] font-semibold leading-[1.15] tracking-tight xl:text-[34px]">
+              Гипотезы,
+              <br />
+              подкреплённые данными
+            </h1>
+            <p className="mt-3.5 text-[14px] leading-relaxed text-white/75">
+              Опишите технологическую задачу — получите гипотезу с обоснованием, ожидаемым
+              эффектом и оценкой рисков.
+            </p>
+
+            <ul className="mt-8 flex flex-col gap-3.5">
+              {PERKS.map((p) => (
+                <li key={p.text} className="flex items-center gap-3 text-[13.5px] text-white/85">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/12 ring-1 ring-inset ring-white/15">
+                    <p.icon className="h-4 w-4" strokeWidth={2} />
+                  </span>
+                  {p.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="text-[12px] text-white/45">
+            Генератор научных гипотез для материаловедения
+          </p>
+        </div>
+      </aside>
+
+      {/* ---- Right form panel — slides in from the right ---- */}
+      <div
+        className={cn(
+          'relative flex flex-1 items-center justify-center bg-panel px-5 py-10 transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+          active ? 'translate-x-0' : 'translate-x-full',
+        )}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute left-4 top-4 flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink-soft transition-colors hover:bg-line/60 hover:text-ink"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          К чату
+        </button>
+
+        <div
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget) setShaking(false)
+          }}
+          className={cn(
+            'w-full max-w-[360px]',
+            active && 'animate-rise-in',
+            shaking && active && 'animate-shake',
           )}
-        </span>
+          style={{ animationDelay: shaking ? '0ms' : '180ms' }}
+        >
+          {/* Mobile brand mark (brand panel is hidden < md) */}
+          <span className="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-accent-50 text-accent-600 md:hidden">
+            <FlaskConical className="h-5 w-5" strokeWidth={2} />
+          </span>
 
-        <h2 className="mt-4 text-xl font-semibold tracking-tight text-ink">
-          {isRegister ? 'Создать аккаунт' : 'Вход в аккаунт'}
-        </h2>
-        <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">
-          {isRegister
-            ? 'Придумайте логин и пароль, чтобы работать с чатом и историей сессий.'
-            : 'Войдите, чтобы работать с чатом и историей сессий.'}
-        </p>
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">
+            {isRegister ? 'Создать аккаунт' : 'С возвращением'}
+          </h2>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">
+            {isRegister
+              ? 'Придумайте логин и пароль, чтобы начать работу.'
+              : 'Войдите, чтобы работать с чатом и историей сессий.'}
+          </p>
 
-        <form onSubmit={submit} className="mt-5 flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-ink-soft">Логин</span>
-            <input
-              ref={usernameRef}
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              placeholder="researcher_1"
-              className={inputClass}
-              disabled={submitting}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-ink-soft">Пароль</span>
-            <div className="relative">
+          <form onSubmit={submit} className="mt-6 flex flex-col gap-3.5">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-ink-soft">Логин</span>
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={isRegister ? 'new-password' : 'current-password'}
-                placeholder="••••••••"
-                className={cn(inputClass, 'pr-11')}
+                ref={usernameRef}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                placeholder="researcher_1"
+                className={inputClass}
                 disabled={submitting}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                tabIndex={-1}
-                className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink-faint transition-colors hover:text-ink"
-                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </label>
+            </label>
 
-          {/* Confirm password — only for registration, revealed smoothly */}
-          <div
-            className={cn(
-              'grid transition-[grid-template-rows] duration-300 ease-out',
-              isRegister ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-            )}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <label className="flex flex-col gap-1.5 pt-px">
-                <span className="text-xs font-medium text-ink-soft">Повторите пароль</span>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-ink-soft">Пароль</span>
+              <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
                   placeholder="••••••••"
-                  className={inputClass}
-                  disabled={submitting || !isRegister}
-                  tabIndex={isRegister ? 0 : -1}
+                  className={cn(inputClass, 'pr-11')}
+                  disabled={submitting}
                 />
-              </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink-faint transition-colors hover:text-ink"
+                  aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </label>
+
+            {/* Confirm password — only for registration, revealed smoothly */}
+            <div
+              className={cn(
+                'grid transition-[grid-template-rows] duration-300 ease-out',
+                isRegister ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <label className="flex flex-col gap-1.5 pt-px">
+                  <span className="text-xs font-medium text-ink-soft">Повторите пароль</span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    className={inputClass}
+                    disabled={submitting || !isRegister}
+                    tabIndex={isRegister ? 0 : -1}
+                  />
+                </label>
+              </div>
             </div>
+
+            {/* Error — smooth height reveal */}
+            <div
+              className={cn(
+                'grid transition-[grid-template-rows] duration-300 ease-out',
+                error ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <p className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-red-600">
+                  {error}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className={cn(
+                'mt-1 flex h-11 items-center justify-center gap-2 rounded-xl bg-ink text-[14px] font-medium text-white shadow-soft transition-all duration-200 ease-out',
+                submitting ? 'cursor-default opacity-80' : 'hover:bg-ink/90 active:scale-[0.98]',
+              )}
+            >
+              {submitting ? (
+                <>
+                  <Spinner className="h-4 w-4" />
+                  <span>{isRegister ? 'Регистрируем…' : 'Входим…'}</span>
+                </>
+              ) : isRegister ? (
+                'Зарегистрироваться'
+              ) : (
+                'Войти'
+              )}
+            </button>
+          </form>
+
+          {/* Switch between sign in / sign up */}
+          <div className="mt-5 text-[13px] text-ink-soft">
+            {isRegister ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
+            <button
+              type="button"
+              onClick={() => switchMode(isRegister ? 'login' : 'register')}
+              className="font-medium text-ink underline-offset-2 transition-colors hover:underline"
+            >
+              {isRegister ? 'Войти' : 'Зарегистрироваться'}
+            </button>
           </div>
 
-          {/* Error — smooth height reveal */}
-          <div
-            className={cn(
-              'grid transition-[grid-template-rows] duration-300 ease-out',
-              error ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-            )}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <p className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-red-600">
-                {error}
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className={cn(
-              'mt-1 flex h-11 items-center justify-center gap-2 rounded-xl bg-accent-500 text-[14px] font-medium text-white shadow-soft transition-all duration-200 ease-out',
-              submitting
-                ? 'cursor-default opacity-80'
-                : 'hover:bg-accent-600 active:scale-[0.98]',
-            )}
-          >
-            {submitting ? (
-              <>
-                <Spinner className="h-4 w-4" />
-                <span>{isRegister ? 'Регистрируем…' : 'Входим…'}</span>
-              </>
-            ) : isRegister ? (
-              'Зарегистрироваться'
-            ) : (
-              'Войти'
-            )}
-          </button>
-        </form>
-
-        {/* Switch between sign in / sign up */}
-        <div className="mt-4 text-center text-[13px] text-ink-soft">
-          {isRegister ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
-          <button
-            type="button"
-            onClick={() => switchMode(isRegister ? 'login' : 'register')}
-            className="font-medium text-accent-600 transition-colors hover:text-accent-700"
-          >
-            {isRegister ? 'Войти' : 'Зарегистрироваться'}
-          </button>
+          <p className="mt-6 border-t border-line pt-5 text-[12px] leading-relaxed text-ink-faint">
+            Забыли логин или пароль? Обратитесь к администратору.
+          </p>
         </div>
-
-        <p className="mt-4 border-t border-line pt-4 text-center text-[12px] leading-relaxed text-ink-faint">
-          Забыли логин или пароль? Обратитесь к администратору.
-        </p>
       </div>
     </div>
   )
