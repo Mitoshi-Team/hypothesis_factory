@@ -3,9 +3,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Cool near-white neutrals — off-white base, never absolute white
-        bg: '#FAFAFA',
-        panel: '#F5F6F7',
+        // Cool near-white neutrals — panels/cards float above a greyer base
+        bg: '#C8C8C8',
+        panel: '#FBFBFC',
         card: '#FFFFFF',
         ink: {
           DEFAULT: '#1C1D1F',

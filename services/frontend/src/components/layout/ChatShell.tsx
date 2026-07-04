@@ -76,37 +76,40 @@ export function ChatShell({ sidebar, composer, children }: ChatShellProps) {
         </div>
       </div>
 
-      <div className="relative flex min-w-0 flex-1 flex-col">
-        {/* Desktop reopen button */}
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          className={cn(
-            'absolute left-3 top-[22px] z-20 hidden h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn transition-all duration-300 hover:text-ink md:grid',
-            sidebarOpen
-              ? 'pointer-events-none -translate-x-3 opacity-0'
-              : 'translate-x-0 opacity-100',
-          )}
-          aria-label="Показать меню"
-        >
-          <PanelLeftOpen className="h-[18px] w-[18px]" />
-        </button>
+      <div className="min-w-0 flex-1 p-3">
+        {/* Floating chat panel — a detached island, matching the sidebar */}
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
+          {/* Desktop reopen button */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className={cn(
+              'absolute left-3 top-3 z-20 hidden h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn transition-all duration-300 hover:text-ink md:grid',
+              sidebarOpen
+                ? 'pointer-events-none -translate-x-3 opacity-0'
+                : 'translate-x-0 opacity-100',
+            )}
+            aria-label="Показать меню"
+          >
+            <PanelLeftOpen className="h-[18px] w-[18px]" />
+          </button>
 
-        {/* Mobile open button */}
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="absolute left-3 top-[22px] z-20 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink md:hidden"
-          aria-label="Показать меню"
-        >
-          <PanelLeftOpen className="h-[18px] w-[18px]" />
-        </button>
+          {/* Mobile open button */}
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="absolute left-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink md:hidden"
+            aria-label="Показать меню"
+          >
+            <PanelLeftOpen className="h-[18px] w-[18px]" />
+          </button>
 
-        <div className="min-h-0 flex-1 overflow-y-auto scroll-slim">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto scroll-slim">{children}</div>
 
-        <div className="shrink-0 px-3 pb-4 pt-1 md:px-6 md:pb-6">
-          <div className="mx-auto w-full max-w-3xl">
-            {composer}
+          <div className="shrink-0 px-3 pb-4 pt-1 md:px-6 md:pb-6">
+            <div className="mx-auto w-full max-w-3xl">
+              {composer}
+            </div>
           </div>
         </div>
       </div>
