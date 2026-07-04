@@ -358,6 +358,7 @@ export function App() {
             messages={active?.messages ?? []}
             loading={threadLoading}
             authenticated={authed}
+            sessionId={activeId ?? undefined}
             onExampleSelect={(text) => setPrefill((p) => ({ text, nonce: p.nonce + 1 }))}
             onLogin={openAuth}
           />

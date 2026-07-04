@@ -208,6 +208,152 @@ export function demoMessageId(): string {
   return demoId('msg_demo_new')
 }
 
+// ---------------------------------------------------------------------------
+// Demo knowledge graph — compact but realistic (superalloy domain), themed to
+// match the seed sessions. A small connected core (shown by default) plus
+// isolated NER entities that only appear under "Show all entities".
+
+function chunk(documentTitle: string, sectionPath: string, text: string) {
+  return [{ chunkId: `chunk_${demoSeq++}`, text, documentTitle, sectionPath }]
+}
+
+let demoGraphCache: KnowledgeGraph | null = null
+
+export function demoGraph(): KnowledgeGraph {
+  if (demoGraphCache) return demoGraphCache
+
+  // Connected core -----------------------------------------------------------
+  const core = [
+    {
+      id: 'ent_alloy',
+      label: 'Material',
+      name: 'Сплав ХН62',
+      score: 0.94,
+      sourceChunks: chunk(
+        'ГОСТ 5632-2014',
+        'Жаропрочные никелевые сплавы',
+        'Сплав ХН62 — деформируемый жаропрочный никелевый сплав, упрочняемый выделениями γ′-фазы; применяется для деталей, работающих при 900–1000 °C.',
+      ),
+    },
+    {
+      id: 'ent_re',
+      label: 'Material',
+      name: 'Рений (Re)',
+      score: 0.88,
+      sourceChunks: chunk(
+        'Reed R.C. The Superalloys',
+        'Refractory elements',
+        'Рений замедляет диффузию в γ-матрице и повышает сопротивление ползучести, стабилизируя структуру при высоких температурах.',
+      ),
+    },
+    {
+      id: 'ent_gammap',
+      label: 'Material',
+      name: 'γ′-фаза (Ni₃Al)',
+      score: 0.9,
+      sourceChunks: chunk(
+        'Reed R.C. The Superalloys',
+        'Strengthening mechanisms',
+        'Дисперсные когерентные выделения γ′-фазы Ni₃(Al,Ti) — основной упрочняющий механизм жаропрочных никелевых сплавов.',
+      ),
+    },
+    {
+      id: 'ent_creep',
+      label: 'Property',
+      name: 'Предел длительной прочности σ₁₀₀',
+      score: 0.82,
+      sourceChunks: chunk(
+        'Внутренний отчёт ЛИ-2024-117',
+        'Испытания на ползучесть',
+        'σ₁₀₀ при 950 °C — целевой показатель; рост на 12–16% ожидается при микролегировании рением.',
+      ),
+    },
+    {
+      id: 'ent_anneal',
+      label: 'Process',
+      name: 'Гомогенизирующий отжиг',
+      score: 0.85,
+      sourceChunks: chunk(
+        'Reed R.C. The Superalloys',
+        'Heat treatment',
+        'Гомогенизирующий отжиг устраняет ликвацию легирующих элементов перед старением, обеспечивая равномерное распределение рения.',
+      ),
+    },
+    {
+      id: 'ent_temp',
+      label: 'Parameter',
+      name: 'Температура 1260 °C',
+      score: 0.8,
+      sourceChunks: chunk(
+        'Внутренний отчёт ЛИ-2024-117',
+        'Режимы термообработки',
+        'Режим гомогенизации 1260 °C / 4 ч подобран для растворения первичных выделений без оплавления границ зёрен.',
+      ),
+    },
+    {
+      id: 'ent_sulfur',
+      label: 'Parameter',
+      name: 'Содержание серы <10 ppm',
+      score: 0.77,
+      sourceChunks: chunk(
+        'ГОСТ 5632-2014',
+        'Требования к чистоте',
+        'Снижение серы по границам зёрен ниже 10 ppm подавляет зернограничное проскальзывание при рабочих температурах.',
+      ),
+    },
+  ]
+
+  const edges = [
+    { source: 'ent_alloy', target: 'ent_re', relation: 'contains', confidence: 0.95, evidence: 'Ввод 0,3–0,4% масс. рения в состав сплава ХН62.' },
+    { source: 'ent_alloy', target: 'ent_gammap', relation: 'contains', confidence: 0.92, evidence: 'γ′-фаза выделяется в матрице сплава ХН62.' },
+    { source: 'ent_re', target: 'ent_gammap', relation: 'influences', confidence: 0.9, evidence: 'Рений стабилизирует γ′-фазу и замедляет её коагуляцию.' },
+    { source: 'ent_re', target: 'ent_creep', relation: 'influences', confidence: 0.88, evidence: 'Рений повышает предел длительной прочности за счёт торможения диффузии.' },
+    { source: 'ent_re', target: 'ent_anneal', relation: 'requires', confidence: 0.84, evidence: 'Равномерное распределение рения требует гомогенизирующего отжига.' },
+    { source: 'ent_anneal', target: 'ent_temp', relation: 'requires', confidence: 0.86, evidence: 'Отжиг проводится при 1260 °C.' },
+    { source: 'ent_anneal', target: 'ent_gammap', relation: 'produces', confidence: 0.8, evidence: 'Последующее старение формирует дисперсную γ′-фазу.' },
+    { source: 'ent_sulfur', target: 'ent_creep', relation: 'influences', confidence: 0.82, evidence: 'Рафинирование по сере повышает сопротивление ползучести.' },
+  ]
+
+  const chains = [
+    { chainId: 'ch_demo_1', nodeIds: ['ent_alloy', 'ent_re', 'ent_gammap'], edgeLabels: ['contains', 'influences'], summary: 'contains → influences' },
+    { chainId: 'ch_demo_2', nodeIds: ['ent_re', 'ent_anneal', 'ent_temp'], edgeLabels: ['requires', 'requires'], summary: 'requires → requires' },
+    { chainId: 'ch_demo_3', nodeIds: ['ent_re', 'ent_creep'], edgeLabels: ['influences'], summary: 'influences' },
+    { chainId: 'ch_demo_4', nodeIds: ['ent_sulfur', 'ent_creep'], edgeLabels: ['influences'], summary: 'influences' },
+  ]
+
+  // Isolated entities (only visible under "Show all entities") ----------------
+  const isolatedSpec: Array<[string, KnowledgeGraph['nodes'][number]['label'], number]> = [
+    ['Никель', 'Material', 0.72],
+    ['Хром', 'Material', 0.7],
+    ['Кобальт', 'Material', 0.68],
+    ['Рутений', 'Material', 0.66],
+    ['Карбиды NbC', 'Material', 0.63],
+    ['Молибден', 'Material', 0.61],
+    ['Вольфрам', 'Material', 0.6],
+    ['Вакуумно-индукционная плавка', 'Process', 0.74],
+    ['Рафинирование расплава', 'Process', 0.69],
+    ['Литьё по выплавляемым моделям', 'Process', 0.64],
+    ['Ковка', 'Process', 0.58],
+    ['Старение', 'Process', 0.71],
+    ['Пластичность', 'Property', 0.62],
+    ['Плотность отливки', 'Property', 0.57],
+    ['Стойкость к окислению', 'Property', 0.6],
+    ['0,3% масс.', 'Parameter', 0.55],
+    ['Рабочая температура 950 °C', 'Parameter', 0.73],
+    ['Скорость охлаждения', 'Parameter', 0.54],
+  ]
+  const isolated = isolatedSpec.map(([name, label], i) => ({
+    id: `ent_iso_${i}`,
+    label,
+    name,
+    score: isolatedSpec[i][2],
+    sourceChunks: chunk('База знаний', 'Извлечённые сущности', `Сущность «${name}» распознана в загруженных материалах.`),
+  }))
+
+  demoGraphCache = { nodes: [...core, ...isolated], edges, chains }
+  return demoGraphCache
+}
+
 /** Canned result returned for anything sent live in demo mode. */
 export function demoResult(): HypothesisResult {
   return {
