@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import type { Message, Session } from '@/types'
 import { DEFAULT_WEIGHTS } from '@/types'
 import { ChatShell } from '@/components/layout/ChatShell'
@@ -12,8 +13,11 @@ let seq = 0
 const uid = (p: string) => `${p}_${Date.now().toString(36)}${seq++}`
 
 export function App() {
+  const navigate = useNavigate()
+  const { sessionId } = useParams()
+  const activeId = sessionId ?? null
+
   const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS)
-  const [activeId, setActiveId] = useState<string | null>(null)
   const [prefill, setPrefill] = useState({ text: '', nonce: 0 })
 
   const active = useMemo(
@@ -55,7 +59,7 @@ export function App() {
         messages: [userMsg, thinking],
       }
       setSessions((prev) => [session, ...prev])
-      setActiveId(sessionId)
+      navigate(`/${sessionId}`)
     } else {
       patch(sessionId, (s) => ({ ...s, messages: [...s.messages, userMsg, thinking] }))
     }
@@ -84,8 +88,8 @@ export function App() {
         <Sidebar
           sessions={sessions}
           activeId={activeId}
-          onSelect={setActiveId}
-          onNew={() => setActiveId(null)}
+          onSelect={(id) => navigate(`/${id}`)}
+          onNew={() => navigate('/')}
         />
       }
       composer={
