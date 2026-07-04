@@ -1,4 +1,4 @@
-import { LogIn } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -7,41 +7,45 @@ interface Props {
   actionLabel?: string
   compact?: boolean
   className?: string
+  style?: CSSProperties
   onLogin: () => void
 }
 
-/** Reusable "sign in to continue" card for locked areas of the UI. */
+/**
+ * Reusable "sign in to continue" card for locked areas of the UI. One shared
+ * look — title, description, single primary button — scaled down via `compact`
+ * for the sidebar. No decorative icon badges.
+ */
 export function LoginPrompt({
   title,
   description,
   actionLabel = 'Войти',
   compact = false,
   className,
+  style,
   onLogin,
 }: Props) {
   return (
     <div
+      style={style}
       className={cn(
         'flex animate-fade-up flex-col items-start rounded-2xl border border-line bg-card',
-        compact ? 'gap-2 px-3.5 py-4' : 'gap-2.5 px-5 py-5',
+        compact ? 'gap-2 px-4 py-4' : 'gap-2.5 px-5 py-5',
         className,
       )}
     >
-      <span
+      <p
         className={cn(
-          'grid place-items-center rounded-xl bg-accent-50 text-accent-600',
-          compact ? 'h-8 w-8' : 'h-10 w-10',
+          'font-semibold tracking-tight text-ink',
+          compact ? 'text-[14px]' : 'text-[16px]',
         )}
       >
-        <LogIn className={compact ? 'h-4 w-4' : 'h-5 w-5'} strokeWidth={2} />
-      </span>
-      <p className={cn('font-medium text-ink', compact ? 'text-[13px]' : 'text-[15px]')}>
         {title}
       </p>
       <p
         className={cn(
           'leading-relaxed text-ink-soft',
-          compact ? 'text-[12px]' : 'text-[13.5px]',
+          compact ? 'text-[12.5px]' : 'text-[13.5px]',
         )}
       >
         {description}
@@ -50,8 +54,8 @@ export function LoginPrompt({
         type="button"
         onClick={onLogin}
         className={cn(
-          'mt-1 rounded-xl bg-accent-500 font-medium text-white shadow-soft transition-all duration-200 ease-out hover:bg-accent-600 active:scale-[0.97]',
-          compact ? 'px-3.5 py-2 text-[12.5px]' : 'px-4 py-2.5 text-[13.5px]',
+          'mt-1.5 rounded-xl bg-accent-500 font-medium text-white shadow-soft transition-all duration-200 ease-out hover:bg-accent-600 active:scale-[0.97]',
+          compact ? 'px-4 py-2 text-[12.5px]' : 'px-4 py-2.5 text-[13.5px]',
         )}
       >
         {actionLabel}
