@@ -2,21 +2,21 @@ repos:
   - repo: local
     hooks:
       - id: ruff-check
-        entry: ruff check
+        entry: uv run ruff check
         name: ruff check
         args: [--exit-non-zero-on-fix]
         language: system
         pass_filenames: false
         types: [python]
       - id: ruff-format
-        entry: ruff format --check
+        entry: uv run ruff format --check
         name: ruff format --check
         language: system
         pass_filenames: false
         types: [python]
       - id: mdformat
         name: mdformat
-        entry: mdformat --check --number
+        entry: uv run mdformat --check --number
         language: system
         types: [markdown]
 

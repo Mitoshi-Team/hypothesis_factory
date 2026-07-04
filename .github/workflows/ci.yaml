@@ -76,7 +76,7 @@ jobs:
         run: uv run ruff format --check --no-cache .
 
       - name: Run mdformat check
-        run: uv run mdformat --check --number .
+        run: uv run mdformat --check --number --exclude "**/.venv/**" .
 
       - name: Run API Gateway tests
         working-directory: services/api_gateway
