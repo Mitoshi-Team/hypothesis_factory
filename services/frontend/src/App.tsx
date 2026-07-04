@@ -8,7 +8,7 @@ import { ChatShell } from '@/components/layout/ChatShell'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { ChatThread } from '@/components/chat/ChatThread'
 import { Composer, type ComposerPayload } from '@/components/composer/Composer'
-import { AuthOverlay } from '@/components/auth/AuthOverlay'
+import { AuthPage } from '@/components/auth/AuthPage'
 import { useAuth } from '@/lib/auth'
 import { saveDraft, takeDraft } from '@/lib/draft'
 import {
@@ -289,14 +289,13 @@ export function App() {
   }, [logout, navigate])
 
   return (
-    <>
-      {/* Chat shell softly recedes while the auth layer is up. Only transform
-          is animated: filter/opacity on this subtree breaks the backdrop-blur
-          glass buttons inside and causes visible repaint pops. */}
+    <div className="relative h-[100dvh] overflow-hidden">
+      {/* Chat shell cross-fades out as the auth page glides in — the content
+          recedes rather than getting covered by a modal. */}
       <div
         className={cn(
-          'h-[100dvh] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
-          isAuthRoute && 'pointer-events-none scale-[0.98]',
+          'h-full transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
+          isAuthRoute && 'pointer-events-none scale-[0.98] opacity-0',
         )}
         aria-hidden={isAuthRoute}
       >
@@ -362,7 +361,7 @@ export function App() {
         </ChatShell>
       </div>
 
-      <AuthOverlay open={isAuthRoute} onClose={closeAuth} onSuccess={closeAuth} />
-    </>
+      <AuthPage active={isAuthRoute} onClose={closeAuth} onSuccess={closeAuth} />
+    </div>
   )
 }
