@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: hypothesis-factory
+          POSTGRES_PASSWORD: hypothesis-factory
+          POSTGRES_DB: hypothesis-factory
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:8.6.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+        ports:
+          - 6379:6379
+      chroma:
+        image: chromadb/chroma:1.5.9
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/localhost/8000; echo -e \"GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\" >&3; timeout 2 cat <&3 | head -1 | grep -q \"200 OK\"'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8001:8000
+    env:
+      DATABASE_URL: postgresql+asyncpg://hypothesis-factory:hypothesis-factory@localhost:5432/hypothesis-factory
+      POSTGRES_DSN: postgresql://hypothesis-factory:hypothesis-factory@localhost:5432/hypothesis-factory
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/0
+      CHROMA_HOST: localhost
+      CHROMA_PORT: "8001"
+      YANDEX_API_KEY: ""
+      YANDEX_FOLDER_ID: ""
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.25"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Run ruff check
+        run: uv run ruff check --no-cache .
+
+      - name: Run ruff format check
+        run: uv run ruff format --check --no-cache .
+
+      - name: Run mdformat check
+        run: uv run mdformat --check --number .
+
+      - name: Run API Gateway tests
+        working-directory: services/api_gateway
+        run: uv run pytest -v
+
+      - name: Run ML Worker tests
+        working-directory: services/ml_worker
+        run: uv run pytest -v
