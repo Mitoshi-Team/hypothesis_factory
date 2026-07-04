@@ -290,12 +290,13 @@ export function App() {
 
   return (
     <div className="relative h-[100dvh] overflow-hidden">
-      {/* Chat shell cross-fades out as the auth page glides in — the content
-          recedes rather than getting covered by a modal. */}
+      {/* Chat shell eases back as the two auth panels slide in from the edges
+          and close over it. Only transform is animated — opacity/filter on this
+          subtree breaks the backdrop-blur glass buttons inside. */}
       <div
         className={cn(
-          'h-full transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
-          isAuthRoute && 'pointer-events-none scale-[0.98] opacity-0',
+          'h-full transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+          isAuthRoute && 'pointer-events-none scale-[0.97]',
         )}
         aria-hidden={isAuthRoute}
       >

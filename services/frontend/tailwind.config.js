@@ -55,11 +55,22 @@ export default {
           '60%': { transform: 'translateX(-4px)' },
           '80%': { transform: 'translateX(2px)' },
         },
+        // Slow drift for the decorative glows on the brand panel
+        float: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(14px, -18px) scale(1.08)' },
+        },
+        'rise-in': {
+          '0%': { opacity: '0', transform: 'translateY(14px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.35s ease-out both',
         'fade-in': 'fade-in 0.4s ease-out both',
         shake: 'shake 0.4s ease-in-out',
+        float: 'float 9s ease-in-out infinite',
+        'rise-in': 'rise-in 0.5s cubic-bezier(0.22,1,0.36,1) both',
       },
     },
   },
