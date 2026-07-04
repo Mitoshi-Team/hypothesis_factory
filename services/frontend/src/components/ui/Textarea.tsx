@@ -17,7 +17,7 @@ export function Textarea({ label, className, id, ...props }: TextareaProps) {
         id={id}
         className={cn(
           'w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm text-ink',
-          'placeholder:text-ink-faint focus:border-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-100',
+          'placeholder:text-ink-faint focus:border-ink focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
           'resize-y min-h-[96px]',
           className,
         )}
