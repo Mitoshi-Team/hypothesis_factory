@@ -90,10 +90,11 @@ async def save_report(
 
     json_path = report_dir / f"{message_id}.json"
     json_path.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False, default=str)
+        json.dumps(data, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
     )
 
     html_path = report_dir / f"{message_id}.html"
-    html_path.write_text(_hypothesis_to_html(data))
+    html_path.write_text(_hypothesis_to_html(data), encoding="utf-8")
 
     return str(json_path)

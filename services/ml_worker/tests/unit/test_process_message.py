@@ -75,7 +75,7 @@ class TestSaveReport:
             assert json_file.exists()
             assert html_file.exists()
 
-            data = json.loads(json_file.read_text())
+            data = json.loads(json_file.read_text(encoding="utf-8"))
             assert "hypothesis" in data
             assert "review" in data
             assert "graph" in data
