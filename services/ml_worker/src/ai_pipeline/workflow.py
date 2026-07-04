@@ -248,11 +248,14 @@ class HypothesisPipeline:
         elif state.input.document:
             doc_id = state.input.document.document_id
 
+        document = state.document or state.input.document
+
         relations = self.relation_rag.retrieve_by_document(doc_id)
 
         graph = self.graph_agent.build(
             entities=entities,
             relations=relations,
+            document=document,
         )
         state.graph = graph
 

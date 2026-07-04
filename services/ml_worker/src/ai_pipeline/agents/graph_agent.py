@@ -11,7 +11,7 @@ from src.ai_pipeline.graph.graph_schema import (
     KnowledgeGraph,
     SourceRef,
 )
-from src.models import Entity, Relation
+from src.models import Entity, Relation, UnifiedDocument, UnifiedElement
 
 
 class GraphAgent:
@@ -20,12 +20,14 @@ class GraphAgent:
         entities: list[Entity],
         relations: list[Relation],
         hypothesis_id: Optional[str] = None,
+        document: Optional[UnifiedDocument] = None,
     ) -> KnowledgeGraph:
         if not entities:
             return KnowledgeGraph()
 
         entity_map = {e.entity_id: e for e in entities}
-        nodes = self._build_nodes(entities)
+        element_map = self._build_element_map(document)
+        nodes = self._build_nodes(entities, element_map, document)
 
         adj, reverse_adj = self._build_adjacency(relations, entity_map)
         undirected_adj = self._build_undirected_adjacency(
@@ -54,26 +56,59 @@ class GraphAgent:
 
         return KnowledgeGraph(nodes=nodes, edges=edges, chains=chains)
 
-    def _build_nodes(self, entities: list[Entity]) -> list[GraphNode]:
+    def _build_element_map(
+        self, document: Optional[UnifiedDocument]
+    ) -> dict[str, UnifiedElement]:
+        if not document:
+            return {}
+        return {el.element_id: el for el in document.elements}
+
+    def _build_nodes(
+        self,
+        entities: list[Entity],
+        element_map: dict[str, UnifiedElement],
+        document: Optional[UnifiedDocument],
+    ) -> list[GraphNode]:
         seen: dict[str, GraphNode] = {}
         for entity in entities:
+            refs = [
+                self._make_source_ref(cid, element_map, document)
+                for cid in entity.chunk_ids
+            ]
             if entity.entity_id in seen:
                 existing = seen[entity.entity_id]
-                for cid in entity.chunk_ids:
-                    if cid not in existing.source_chunks:
-                        existing.source_chunks.append(SourceRef(chunk_id=cid))
+                for ref in refs:
+                    if ref.chunk_id not in {
+                        r.chunk_id for r in existing.source_chunks
+                    }:
+                        existing.source_chunks.append(ref)
                 continue
             node = GraphNode(
                 id=entity.entity_id,
                 label=entity.label.value,
                 name=entity.name,
-                source_chunks=[
-                    SourceRef(chunk_id=cid) for cid in entity.chunk_ids
-                ],
+                source_chunks=refs,
                 metadata=entity.metadata,
             )
             seen[entity.entity_id] = node
         return list(seen.values())
+
+    def _make_source_ref(
+        self,
+        chunk_id: str,
+        element_map: dict[str, UnifiedElement],
+        document: Optional[UnifiedDocument],
+    ) -> SourceRef:
+        element = element_map.get(chunk_id)
+        if element is None:
+            return SourceRef(chunk_id=chunk_id)
+        return SourceRef(
+            chunk_id=chunk_id,
+            element_id=element.element_id,
+            text=element.embedding_payload,
+            document_title=document.title if document else "",
+            section_path=element.metadata.get("section_path", ""),
+        )
 
     def _build_adjacency(
         self,
