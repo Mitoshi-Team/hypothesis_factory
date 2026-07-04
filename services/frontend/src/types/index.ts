@@ -40,9 +40,10 @@ export type Message =
   | {
       id: string
       role: 'assistant'
-      status: 'thinking' | 'done'
+      status: 'thinking' | 'done' | 'failed'
       iteration: number
       result?: HypothesisResult
+      error?: string
     }
 
 export interface Session {
@@ -52,6 +53,13 @@ export interface Session {
   constraints: string
   weights: Weights
   messages: Message[]
+  /** True once the full history (messages + results) has been fetched. */
+  loaded?: boolean
+}
+
+/** Authenticated user, as known on the client (the API has no /me endpoint). */
+export interface User {
+  username: string
 }
 
 export const DEFAULT_WEIGHTS: Weights = {
