@@ -12,8 +12,11 @@ from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
 
 class HistoryRAG:
-    def __init__(self, embedder: Any | None = None) -> None:
+    def __init__(
+        self, embedder: Any | None = None, session_id: str = ""
+    ) -> None:
         self.store = ChromaStore(embedder=embedder)
+        self.session_id = session_id
 
     def store_result(
         self,
@@ -50,7 +53,12 @@ class HistoryRAG:
             is_positive_example=is_positive,
         )
 
-        self.store.populate_history([entry.model_dump()])
+        meta = entry.model_dump()
+        meta["type"] = "history"
+        meta["session_id"] = self.session_id
+        meta["is_positive_example"] = str(is_positive)
+        meta["scores"] = str(scores)
+        self.store.populate_history([meta])
 
     def retrieve_similar(
         self,
@@ -58,7 +66,18 @@ class HistoryRAG:
         n_results: int = 0,
         user_id: str = "",
     ) -> str:
-        where = {"user_id": user_id} if user_id else None
+        conditions: list[dict[str, Any]] = [{"type": "history"}]
+        if self.session_id:
+            conditions.append({"session_id": self.session_id})
+        if user_id:
+            conditions.append({"user_id": user_id})
+
+        where: dict[str, Any]
+        if len(conditions) == 1:
+            where = conditions[0]
+        else:
+            where = {"$and": conditions}
+
         entries = self.store.query_history(
             query_text=problem,
             n_results=n_results,
