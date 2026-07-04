@@ -32,7 +32,7 @@ services:
       retries: 3
 
   chroma:
-    image: chromadb/chroma:0.6.4
+    image: chromadb/chroma:1.5.9
     container_name: chroma
     volumes:
       - chroma_data:/chroma/chroma
@@ -41,11 +41,15 @@ services:
     networks:
       - hypothesis_factory
     environment:
-      - IS_PERSISTENT=TRUE
-      - PERSIST_DIRECTORY=/chroma/chroma
+      - CHROMA_DB_IMPL=duckdb+parquet
+      - CHROMA_PERSIST_DIRECTORY=/chroma/chroma
       - ANONYMIZED_TELEMETRY=FALSE
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c 'exec 3<>/dev/tcp/localhost/8000; echo -e \"GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\" >&3; timeout 2 cat <&3 | head -1 | grep -q \"200 OK\"'",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

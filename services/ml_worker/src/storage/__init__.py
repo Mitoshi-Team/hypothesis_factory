@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
 
-async def download_file(remote_path: str) -> str:
-    """Download file from remote storage (S3 etc.) to local temp path.
 
-    Currently returns the path as-is (local filesystem).
-    Future: download from S3 to a temp directory.
+def download_file(remote_path: str) -> str:
+    """Resolve uploaded file path.
+
+    Currently expects absolute local filesystem path and verifies existence.
+    Future: download from S3/MinIO to a temp directory.
     """
-    return remote_path
+    path = Path(remote_path)
+    if not path.exists():
+        msg = f"File not found: {remote_path}"
+        raise FileNotFoundError(msg)
+    return str(path)

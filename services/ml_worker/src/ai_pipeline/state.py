@@ -77,6 +77,8 @@ class PipelineInput(BaseModel):
     weights: Optional[dict[str, float]] = None
     iteration: int = 0
     feedback: Optional[str] = None
+    previous_hypothesis: Optional[HypothesisCard] = None
+    previous_review: Optional[HypothesisReview] = None
     new_documents: list[UnifiedDocument] = []
 
 
