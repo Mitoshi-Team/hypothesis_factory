@@ -5,7 +5,7 @@ from src.ai_pipeline.workflow import HypothesisPipeline
 
 
 async def run_pipeline(input_data: PipelineInput) -> PipelineOutput:
-    pipeline = HypothesisPipeline()
+    pipeline = HypothesisPipeline(session_id=input_data.session_id or "")
     return await pipeline.run(input_data)
 
 

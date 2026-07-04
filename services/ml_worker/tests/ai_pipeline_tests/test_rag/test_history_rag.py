@@ -125,15 +125,17 @@ class TestHistoryRAG:
         with patch.object(rag.store, "query_history", return_value=[]) as mock:
             rag.retrieve_similar("test", user_id="alice")
             mock.assert_called_once_with(
-                query_text="test", n_results=0, where={"user_id": "alice"}
+                query_text="test",
+                n_results=0,
+                where={"type": "history", "user_id": "alice"},
             )
 
-    def test_retrieve_without_user_id_passes_none_where(self):
+    def test_retrieve_without_user_id_passes_type_where(self):
         rag = HistoryRAG()
         with patch.object(rag.store, "query_history", return_value=[]) as mock:
             rag.retrieve_similar("test")
             mock.assert_called_once_with(
-                query_text="test", n_results=0, where=None
+                query_text="test", n_results=0, where={"type": "history"}
             )
 
     def test_store_without_review(self):

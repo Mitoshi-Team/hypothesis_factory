@@ -9,9 +9,12 @@ from src.models import Entity, Relation, RelationType
 
 
 class RelationRAG:
-    def __init__(self, embedder: Any | None = None) -> None:
+    def __init__(
+        self, embedder: Any | None = None, session_id: str = ""
+    ) -> None:
         self.store = ChromaStore(embedder=embedder)
         self.embedder = embedder or YandexEmbedder()
+        self.session_id = session_id
 
     def index_relations(
         self,
@@ -46,6 +49,7 @@ class RelationRAG:
                     "target_name": target_name,
                     "relation_type": rel.relation_type.value,
                     "document_id": document_id,
+                    "session_id": self.session_id,
                     "confidence": rel.confidence,
                     "evidence": rel.metadata.get("evidence", ""),
                 }
@@ -67,10 +71,17 @@ class RelationRAG:
         n_results: int = 0,
         where: Optional[dict[str, Any]] = None,
     ) -> tuple[list[Relation], str]:
+        conditions: list[dict[str, Any]] = [{"type": "relation"}]
+        if self.session_id:
+            conditions.append({"session_id": self.session_id})
         if where:
-            base_where = {"$and": [{"type": "relation"}, where]}
+            conditions.append(where)
+
+        base_where: dict[str, Any]
+        if len(conditions) == 1:
+            base_where = conditions[0]
         else:
-            base_where = {"type": "relation"}
+            base_where = {"$and": conditions}
 
         chunks = self.store.query_knowledge(
             query_text=query,
@@ -96,8 +107,18 @@ class RelationRAG:
     ) -> list[Relation]:
         if not document_id:
             return []
+        conditions: list[dict[str, Any]] = [{"document_id": document_id}]
+        if self.session_id:
+            conditions.append({"session_id": self.session_id})
+
+        where: dict[str, Any]
+        if len(conditions) == 1:
+            where = conditions[0]
+        else:
+            where = {"$and": conditions}
+
         chunks = self.store.get_knowledge_by_filter(
-            where={"document_id": document_id},
+            where=where,
             limit=1000,
         )
         return self._chunks_to_relations(chunks)
@@ -121,6 +142,7 @@ class RelationRAG:
                 {
                     "type": "chain",
                     "document_id": document_id,
+                    "session_id": self.session_id,
                     "chain_id": chain.chain_id,
                     "node_ids": ",".join(chain.node_ids),
                     "edge_labels": ",".join(chain.edge_labels),

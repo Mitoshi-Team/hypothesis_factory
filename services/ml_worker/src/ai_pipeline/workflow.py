@@ -8,6 +8,7 @@ from src.ai_pipeline.agents.relation_extractor import RelationExtractor
 from src.ai_pipeline.agents.reviewer import ReviewerAgent
 from src.ai_pipeline.chunking.hybrid_chunker import HybridChunker
 from src.ai_pipeline.embeddings.yandex_embedder import YandexEmbedder
+from src.ai_pipeline.graph.graph_schema import KnowledgeGraph
 from src.ai_pipeline.rag.history_rag import HistoryRAG
 from src.ai_pipeline.rag.knowledge_rag import KnowledgeRAG
 from src.ai_pipeline.rag.relation_rag import RelationRAG
@@ -24,12 +25,19 @@ from src.ner import extract_document, extract_entities
 
 
 class HypothesisPipeline:
-    def __init__(self) -> None:
+    def __init__(self, session_id: str = "") -> None:
+        self.session_id = session_id
         self.chunker = HybridChunker()
         self.embedder = YandexEmbedder()
-        self.knowledge_rag = KnowledgeRAG(embedder=self.embedder)
-        self.history_rag = HistoryRAG(embedder=self.embedder)
-        self.relation_rag = RelationRAG(embedder=self.embedder)
+        self.knowledge_rag = KnowledgeRAG(
+            embedder=self.embedder, session_id=session_id
+        )
+        self.history_rag = HistoryRAG(
+            embedder=self.embedder, session_id=session_id
+        )
+        self.relation_rag = RelationRAG(
+            embedder=self.embedder, session_id=session_id
+        )
         self.generator = GeneratorAgent()
         self.reviewer = ReviewerAgent()
         self.relation_extractor = RelationExtractor()
@@ -93,7 +101,7 @@ class HypothesisPipeline:
         from src.ai_pipeline.vector_store.chroma_store import ChromaStore
 
         store = ChromaStore(embedder=self.embedder)
-        store.populate_knowledge(chunks)
+        store.populate_knowledge(chunks, session_id=self.session_id)
 
         return state
 
@@ -240,6 +248,7 @@ class HypothesisPipeline:
     def _build_graph(self, state: PipelineState) -> PipelineState:
         entities = state.ner_entities or state.entities
         if not entities:
+            state.graph = KnowledgeGraph()
             return state
 
         doc_id = ""
