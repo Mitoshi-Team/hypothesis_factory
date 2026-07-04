@@ -1,4 +1,47 @@
-__pycache__/
-venv/
-
+# Environment
 .env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Nix
+result
+result-*
+
+# Reports and uploads
+reports/
+uploads/
+*.db
+
+# Logs
+*.log

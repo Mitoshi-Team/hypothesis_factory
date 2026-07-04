@@ -1,0 +1,126 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hypothesis-factory}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hypothesis-factory}
+      POSTGRES_DB: ${POSTGRES_DB:-hypothesis-factory}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hypothesis_factory
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hypothesis-factory}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:8.6.2
+    container_name: redis
+    command:
+      - redis-server
+    restart: unless-stopped
+    networks:
+      - hypothesis_factory
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  chroma:
+    image: chromadb/chroma:1.5.9
+    container_name: chroma
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "${CHROMA_PORT:-8001}:8000"
+    networks:
+      - hypothesis_factory
+    environment:
+      - CHROMA_DB_IMPL=duckdb+parquet
+      - CHROMA_PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c 'exec 3<>/dev/tcp/localhost/8000; echo -e \"GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\" >&3; timeout 2 cat <&3 | head -1 | grep -q \"200 OK\"'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ml_worker:
+    build:
+      context: .
+      dockerfile: services/ml_worker/Dockerfile
+    container_name: ml_worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    networks:
+      - hypothesis_factory
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      - POSTGRES_DSN=${POSTGRES_DSN:-postgresql://hypothesis-factory:hypothesis-factory@postgres:5432/hypothesis-factory}
+      - CHROMA_HOST=${CHROMA_HOST:-chroma}
+      - CHROMA_PORT=${CHROMA_PORT:-8000}
+      - YANDEX_API_KEY=${YANDEX_API_KEY}
+      - YANDEX_FOLDER_ID=${YANDEX_FOLDER_ID}
+      - REPORT_DIR=${REPORT_DIR:-/app/reports}
+    volumes:
+      - uploads:/app/uploads
+      - reports:/app/reports
+    command: ["celery", "-A", "src.celery_app", "worker", "-l", "info", "-c", "1"]
+
+  api_gateway:
+    build:
+      context: .
+      dockerfile: services/api_gateway/Dockerfile
+    container_name: api_gateway
+    ports:
+      - "${API_GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml_worker:
+        condition: service_started
+    networks:
+      - hypothesis_factory
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://hypothesis-factory:hypothesis-factory@postgres:5432/hypothesis-factory}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - UPLOAD_DIR=${UPLOAD_DIR:-/app/uploads}
+      - REPORT_DIR=${REPORT_DIR:-/app/reports}
+    volumes:
+      - uploads:/app/uploads
+      - reports:/app/reports
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+volumes:
+  postgres_data:
+    driver: local
+  chroma_data:
+    driver: local
+  uploads:
+    driver: local
+  reports:
+    driver: local
+
+networks:
+  hypothesis_factory:
+    driver: bridge
