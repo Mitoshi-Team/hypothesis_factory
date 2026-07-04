@@ -2,7 +2,6 @@ import { Plus } from 'lucide-react'
 import type { Session } from '@/types'
 import { cn } from '@/lib/cn'
 import { relativeDay } from '@/lib/format'
-import { BrandMark } from './BrandMark'
 
 interface SidebarProps {
   sessions: Session[]
@@ -14,18 +13,14 @@ interface SidebarProps {
 export function Sidebar({ sessions, activeId, onSelect, onNew }: SidebarProps) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center px-4">
-        <BrandMark />
-      </div>
-
-      <div className="px-3 pb-2">
+      <div className="flex h-14 items-center px-3">
         <button
           type="button"
           onClick={onNew}
-          className="flex w-full items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm font-medium text-ink shadow-soft transition-colors hover:bg-accent-50 hover:border-accent-200"
+          className="grid h-9 w-9 place-items-center rounded-xl text-ink-soft glass-btn hover:text-ink"
+          aria-label="Новый чат"
         >
-          <Plus className="h-4 w-4 text-accent-600" strokeWidth={2.2} />
-          Новый разбор
+          <Plus className="h-[18px] w-[18px]" strokeWidth={2.2} />
         </button>
       </div>
 
