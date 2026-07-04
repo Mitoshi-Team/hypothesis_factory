@@ -19,6 +19,7 @@ repos:
         entry: mdformat --check --number
         language: system
         types: [markdown]
+        exclude: ^(README\.md|services/ml_worker/README\.md|docs/REQUIREMENTS\.md|docs/API_CONTRACT\.md)$
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
