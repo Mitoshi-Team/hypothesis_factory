@@ -473,7 +473,7 @@ export async function fetchGraph(sessionId: string): Promise<KnowledgeGraph> {
 }
 
 const POLL_INTERVAL_MS = 2500
-const POLL_TIMEOUT_MS = 10 * 60 * 1000
+const POLL_TIMEOUT_MS = 20 * 60 * 1000
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
