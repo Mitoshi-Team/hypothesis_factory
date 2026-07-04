@@ -68,8 +68,6 @@ class NERPipeline:
     def process(self, file_path: str) -> NERResult:
         document = self.extract_document(file_path)
 
-        self.db.copy_tables(document)
-
         entities = self.extract_entities(document)
 
         self.db.save_entities(entities)

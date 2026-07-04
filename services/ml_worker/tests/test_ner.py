@@ -3,9 +3,17 @@ from __future__ import annotations
 import sqlite3
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
-from src.models import EntityLabel, SourceType, UnifiedDocument, UnifiedElement
+from src.models import (
+    ElementType,
+    EntityLabel,
+    SourceType,
+    TableData,
+    UnifiedDocument,
+    UnifiedElement,
+)
 from src.ner.db_handler import DBHandler
 from src.ner.extractors import (
     DBExtractor,
@@ -399,6 +407,25 @@ class TestDBExtractor:
         with pytest.raises(ValueError, match="CSV"):
             DBExtractor._resolve_db_url("/tmp/test.csv")  # noqa: S108
 
+    def test_extract_csv_returns_document(self, tmp_dir: Path):
+        csv_file = tmp_dir / "test_csv.csv"
+        csv_file.write_text(
+            "Material,Property,Value\n"
+            "Ниобий,Жаропрочность,1200\n"
+            "Хром,Коррозия,800\n",
+            encoding="utf-8",
+        )
+        extractor = DBExtractor()
+        doc = extractor.extract(str(csv_file))
+        assert isinstance(doc, UnifiedDocument)
+        assert doc.source_type == SourceType.DATABASE
+        assert len(doc.elements) == 1
+        td = doc.elements[0].table_data
+        assert td is not None
+        assert td.name == "test_csv"
+        assert td.columns == ["Material", "Property", "Value"]
+        assert len(td.rows) == 2
+
     def test_extract_nonexistent_db_raises(self):
         extractor = DBExtractor()
         with pytest.raises(Exception):
@@ -531,6 +558,54 @@ class TestDBHandler:
             source_type=SourceType.TEXT, source_uri="/dev/null"
         )
         handler.copy_tables(doc)
+
+    def test_copy_tables_executes_correct_sql(self):
+        with (
+            patch("src.ner.db_handler.create_engine") as mock_create_engine,
+            patch("src.ner.db_handler.YandexAIStudioClient") as mock_yandex,
+        ):
+            # Mock YandexAIStudioClient
+            mock_studio = mock_yandex.return_value
+            mock_studio.complete.return_value = "Описание таблицы"
+
+            # Mock SQLAlchemy connection
+            mock_conn = MagicMock()
+            mock_engine = mock_create_engine.return_value
+            mock_engine.begin.return_value.__enter__.return_value = mock_conn
+
+            handler = DBHandler(
+                connection_string="postgresql://test:test@localhost/test"
+            )
+
+            # Build unified document with a table
+            table_data = TableData(
+                name="Materials",
+                columns=["Material", "Value"],
+                rows=[["Ниобий", 1200], ["Хром", 800]],
+            )
+            element = UnifiedElement(
+                type=ElementType.TABLE, table_data=table_data
+            )
+            doc = UnifiedDocument(
+                document_id="12345678-1234-1234-1234-123456789012",
+                source_type=SourceType.DATABASE,
+                source_uri="/dev/null",
+                elements=[element],
+            )
+
+            handler.copy_tables(doc)
+
+            # Assert Yandex was called to generate caption
+            mock_studio.complete.assert_called_once()
+            assert table_data.caption == "Описание таблицы"
+
+            # Assert correct SQL queries were executed
+            calls = mock_conn.execute.call_args_list
+            sql_queries = [call[0][0].text for call in calls]
+            assert any("DROP TABLE IF EXISTS" in sql for sql in sql_queries)
+            assert any("CREATE TABLE" in sql for sql in sql_queries)
+            assert any("INSERT INTO" in sql for sql in sql_queries)
+            assert any("COMMENT ON" in sql for sql in sql_queries)
 
     def test_save_entities_logs(self):
         handler = DBHandler()

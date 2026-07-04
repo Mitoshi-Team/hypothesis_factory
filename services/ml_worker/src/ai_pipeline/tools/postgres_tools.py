@@ -27,15 +27,33 @@ class PostgresTools:
         pool = await self._get_pool()
         async with pool.acquire() as conn:
             rows = await conn.fetch(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = 'public' ORDER BY table_name"
+                """
+                SELECT 
+                    c.relname AS table_name,
+                    d.description AS comment
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = 0
+                WHERE c.relkind = 'r'
+                  AND n.nspname = 'public'
+                ORDER BY table_name
+                """
             )
-            table_names = [row["table_name"] for row in rows]
-            return (
-                "Tables: " + ", ".join(table_names)
-                if table_names
-                else "No tables found."
-            )
+            if not rows:
+                return "No tables found."
+            parts = []
+            for row in rows:
+                name = row["table_name"]
+                comment = (
+                    row.get("comment")
+                    if hasattr(row, "get")
+                    else (row["comment"] if "comment" in row else None)
+                )
+                if comment:
+                    parts.append(f"- {name}: {comment}")
+                else:
+                    parts.append(f"- {name}")
+            return "Tables:\n" + "\n".join(parts)
 
     async def get_table_schema(self, table_name: str) -> str:
         pool = await self._get_pool()
