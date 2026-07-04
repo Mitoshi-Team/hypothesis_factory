@@ -26,6 +26,10 @@ docker compose up -d api_gateway
 
 ```bash
 cd services/api_gateway
+# Запуск через python-модуль (использует порт и хост из настроек)
+uv run python -m src.main
+
+# Или прямой запуск через uvicorn
 uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -36,7 +40,10 @@ uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 - `DATABASE_URL` — PostgreSQL через asyncpg.
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` — Redis.
 - `SECRET_KEY` — ключ для подписи JWT.
-- `UPLOAD_DIR` — директория для загружаемых файлов.
+- `ACCESS_TOKEN_EXPIRE_MINUTES` — время жизни JWT Access токена (по умолчанию 15 минут).
+- `REFRESH_TOKEN_EXPIRE_DAYS` — время жизни JWT Refresh токена (по умолчанию 7 дней).
+- `UPLOAD_DIR` — директория для загружаемых файлов пользователей.
+- `REPORT_DIR` — директория для хранения сгенерированных отчетов.
 - `ENVIRONMENT`, `DEBUG`, `HOST`, `PORT`, `CORS_ORIGINS`, `API_PREFIX`.
 
 ## Структура
