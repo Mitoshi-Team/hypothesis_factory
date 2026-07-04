@@ -66,7 +66,7 @@ export function SaveModal({ result, onClose }: SaveModalProps) {
               type="button"
               onClick={() => save(key)}
               disabled={busy !== null}
-              className="group flex items-center gap-3 rounded-xl border border-line bg-bg px-3.5 py-3 text-left transition-colors hover:border-accent-200 hover:bg-accent-50 disabled:opacity-60"
+              className="group flex items-center gap-3 rounded-xl border border-line bg-panel px-3.5 py-3 text-left transition-colors hover:border-accent-200 hover:bg-accent-50 disabled:opacity-60"
             >
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-panel text-accent-600 group-hover:bg-card">
                 {busy === key ? <Spinner className="h-4 w-4" /> : <Icon className="h-[18px] w-[18px]" />}
