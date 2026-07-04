@@ -216,6 +216,14 @@ class HypothesisCard(BaseModel):
     source_chunks: List[str] = Field(
         ..., description="Source text chunk identifiers used"
     )
+    needs_expert_review: bool = Field(
+        default=False,
+        description="True if the hypothesis failed automatic validation",
+    )
+    validation_violations: List[str] = Field(
+        default_factory=list,
+        description="List of validation violations if any",
+    )
 
 
 class HypothesisReview(BaseModel):

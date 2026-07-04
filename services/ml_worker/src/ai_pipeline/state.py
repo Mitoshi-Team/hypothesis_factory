@@ -13,6 +13,13 @@ from src.models import (
 )
 
 
+@dataclass
+class ValidationResult:
+    is_valid: bool = True
+    violations: list[str] = field(default_factory=list)
+    corrected_prompt_hints: list[str] = field(default_factory=list)
+
+
 class HypothesisCard(BaseModel):
     title: str = ""
     problem: str = ""
@@ -26,6 +33,8 @@ class HypothesisCard(BaseModel):
     evidence_sources: list[str] = []
     supporting_nodes: list[str] = []
     source_chunks: list[str] = []
+    needs_expert_review: bool = False
+    validation_violations: list[str] = []
 
 
 class HypothesisReview(BaseModel):
@@ -108,3 +117,6 @@ class PipelineState:
     trace: PipelineTrace = field(default_factory=PipelineTrace)
 
     requires_chunking: bool = True
+    validation: Optional[ValidationResult] = None
+    validation_attempts: int = 0
+    validation_feedback: Optional[str] = None
