@@ -39,17 +39,17 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
           addFiles(e.dataTransfer.files)
         }}
         className={cn(
-          'flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors',
+          'flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-7 text-center transition-colors',
           dragging
-            ? 'border-brand-400 bg-brand-50'
-            : 'border-slate-300 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/50',
+            ? 'border-accent-200 bg-accent-50'
+            : 'border-line-strong bg-bg hover:border-accent-200 hover:bg-accent-50/60',
         )}
       >
-        <FileUp className="h-6 w-6 text-brand-500" />
-        <span className="text-sm font-medium text-slate-700">
+        <FileUp className="h-5 w-5 text-accent-500" />
+        <span className="text-sm font-medium text-ink">
           Перетащите файлы или нажмите для выбора
         </span>
-        {hint && <span className="text-xs text-slate-400">{hint}</span>}
+        {hint && <span className="text-xs text-ink-faint">{hint}</span>}
       </button>
 
       <input
@@ -66,13 +66,13 @@ export function FileDropzone({ files, onFilesChange, accept, hint }: FileDropzon
           {files.map((name) => (
             <li
               key={name}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 py-1 text-xs text-ink-soft"
             >
               <span className="max-w-[180px] truncate">{name}</span>
               <button
                 type="button"
                 onClick={() => removeFile(name)}
-                className="text-slate-400 hover:text-red-500"
+                className="text-ink-faint hover:text-red-500"
                 aria-label={`Удалить ${name}`}
               >
                 <X className="h-3.5 w-3.5" />
