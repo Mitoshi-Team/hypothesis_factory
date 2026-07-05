@@ -6,23 +6,30 @@
 
 Проект представляет собой монорепозиторий на `uv` с несколькими сервисами:
 
-- `services/api_gateway` - HTTP API для пользователей (FastAPI): аутентификация, сессии, загрузка файлов, запуск задач.
-- `services/ml_worker` - фоновый ML/Celery worker: ingestion документов, NER, RAG, генерация и ревью гипотез.
-- `services/frontend` - веб-интерфейс (MVP).
+- `services/api_gateway` — HTTP API для пользователей (FastAPI): аутентификация, сессии, загрузка файлов, запуск задач.
+- `services/ml_worker` — фоновый ML/Celery worker: ingestion документов, NER, RAG, генерация и ревью гипотез.
+- `services/frontend` — веб-интерфейс (React + Vite).
 
 Инфраструктура поднимается через `docker-compose.yaml`:
 
-- PostgreSQL - пользователи, сессии, сообщения, результаты.
-- Redis - брокер Celery.
-- ChromaDB - векторное хранилище.
+- PostgreSQL — пользователи, сессии, сообщения, результаты.
+- Redis — брокер Celery.
+- ChromaDB — векторное хранилище.
 
 ## Быстрый старт
 
-1. Скопируйте `.env.example` в `.env` и заполните переменные.
+1. Скопируйте `.env.example` в `.env` и заполните обязательные переменные:
 
 ```bash
 cp .env.example .env
 ```
+
+Обязательно задайте:
+
+- `YANDEX_API_KEY` — ключ доступа к Yandex AI Studio.
+- `YANDEX_FOLDER_ID` — идентификатор каталога Yandex Cloud.
+
+Остальные переменные заполнены разумными значениями по умолчанию.
 
 2. Запустите инфраструктуру и сервисы:
 
@@ -30,7 +37,23 @@ cp .env.example .env
 docker compose up -d
 ```
 
-3. API Gateway будет доступен по адресу `http://localhost:8000`.
+3. Создайте первого администратора:
+
+```bash
+uv run --package api-gateway python scripts/create_admin.py admin <password>
+```
+
+Или внутри запущенного контейнера:
+
+```bash
+docker compose exec api_gateway /app/.venv/bin/python /app/scripts/create_admin.py admin <password>
+```
+
+4. Откройте веб-интерфейс:
+
+- Frontend: `http://localhost:4173`
+- API Gateway: `http://localhost:8000`
+- Документация API: `http://localhost:8000/docs`
 
 ## Локальная разработка
 
@@ -69,16 +92,18 @@ uv run pre-commit run --all-files
 
 Основные переменные описаны в `.env.example`:
 
-- `POSTGRES_*` - подключение к PostgreSQL.
-- `POSTGRES_DSN` - DSN для ML Worker и API Gateway.
-- `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` - подключение к Redis.
-- `CHROMA_HOST`, `CHROMA_PORT` - подключение к ChromaDB.
-- `SECRET_KEY` - ключ для подписи JWT.
-- `YANDEX_API_KEY`, `YANDEX_FOLDER_ID` - доступ к Yandex AI Studio (OpenAI-совместимый API).
-- `YANDEX_EMBED_MODEL`, `YANDEX_LLM_MODEL` - модели для эмбеддингов и генерации.
-- `NER_MODEL_NAME`, `HF_TOKEN` - модель GLiNER и токен HuggingFace.
-- `UPLOAD_DIR` - директория для загружаемых файлов.
-- `REPORT_DIR` - директория для отчётов ML worker.
+- `POSTGRES_*` — подключение к PostgreSQL.
+- `POSTGRES_DSN` / `DATABASE_URL` — DSN для ML Worker и API Gateway.
+- `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` — подключение к Redis.
+- `CHROMA_HOST`, `CHROMA_PORT` — подключение к ChromaDB.
+- `SECRET_KEY` — ключ для подписи JWT.
+- `YANDEX_API_KEY`, `YANDEX_FOLDER_ID` — доступ к Yandex AI Studio.
+- `YANDEX_EMBED_MODEL`, `YANDEX_LLM_MODEL` — модели для эмбеддингов и генерации.
+- `YANDEX_LLM_TEMPERATURE`, `YANDEX_LLM_MAX_TOKENS` — параметры генерации.
+- `NER_MODEL_NAME`, `HF_TOKEN` — модель GLiNER и токен HuggingFace.
+- `API_GATEWAY_PORT`, `FRONTEND_PORT` — внешние порты сервисов.
+- `UPLOAD_DIR` — директория для загружаемых файлов.
+- `REPORT_DIR` — директория для отчётов ML worker.
 
 ## Статус реализации
 
@@ -87,10 +112,12 @@ uv run pre-commit run --all-files
 - Приём и предобработка документов (PDF, Excel, Word, Markdown, TXT, базы данных).
 - Извлечение сущностей и связей (NER), построение графа знаний.
 - Генерация и ревью гипотез с обоснованием, оценкой новизны, рисков и ценности.
+- Валидация сгенерированных гипотез с возможностью fallback на экспертную проверку.
 - Ранжирование по настраиваемым весам критериев.
 - Сессионная модель: чат-проект с сохранением ограничений, весов, истории сообщений и результатов.
 - Итеративное улучшение гипотез на основе предыдущих результатов (`previous_hypothesis`, `previous_review`) и RAG-истории.
 - Формирование JSON/HTML отчётов по каждому сообщению.
+- Docker Compose развёртывание всех сервисов.
 
 Ещё не реализовано:
 
@@ -102,9 +129,3 @@ uv run pre-commit run --all-files
 - [API Gateway](services/api_gateway/README.md)
 - [ML Worker](services/ml_worker/README.md)
 - [Frontend](services/frontend/README.md)
-
-## Ветки разработки
-
-- `main` - инфраструктура, ML worker, корневые файлы.
-- `services/api_gateway` - разработка API Gateway.
-- `services/frontend` - разработка фронтенда.

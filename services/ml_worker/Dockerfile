@@ -19,5 +19,6 @@ COPY services/api_gateway/pyproject.toml services/api_gateway/
 RUN uv sync --frozen --no-dev --package ml-worker
 
 COPY services/ml_worker/src ./src
+COPY docs ./docs
 
-CMD ["celery", "-A", "src.celery_app", "worker", "-l", "info", "-c", "1"]
+CMD ["/app/.venv/bin/celery", "-A", "src.celery_app", "worker", "-l", "info", "-c", "1"]

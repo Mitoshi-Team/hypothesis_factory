@@ -9,8 +9,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    expose:
+      - "5432"
     networks:
       - hypothesis_factory
     healthcheck:
@@ -26,8 +26,8 @@ services:
     command:
       - redis-server
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    expose:
+      - "6379"
     networks:
       - hypothesis_factory
     healthcheck:
@@ -41,8 +41,8 @@ services:
     container_name: chroma
     volumes:
       - chroma_data:/chroma/chroma
-    ports:
-      - "${CHROMA_PORT:-8001}:8000"
+    expose:
+      - "8000"
     networks:
       - hypothesis_factory
     environment:
@@ -50,11 +50,10 @@ services:
       - CHROMA_PERSIST_DIRECTORY=/chroma/chroma
       - ANONYMIZED_TELEMETRY=FALSE
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "bash -c 'exec 3<>/dev/tcp/localhost/8000; echo -e \"GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\" >&3; timeout 2 cat <&3 | head -1 | grep -q \"200 OK\"'",
-        ]
+      test: >
+        bash -c 'exec 3<>/dev/tcp/localhost/8000;
+        echo -e "GET /api/v2/heartbeat HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n" >&3;
+        head -1 <&3 | grep -q "200 OK"'
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,11 +81,17 @@ services:
       - CHROMA_PORT=${CHROMA_PORT:-8000}
       - YANDEX_API_KEY=${YANDEX_API_KEY}
       - YANDEX_FOLDER_ID=${YANDEX_FOLDER_ID}
+      - YANDEX_EMBED_MODEL=${YANDEX_EMBED_MODEL:-text-embeddings/latest}
+      - YANDEX_LLM_MODEL=${YANDEX_LLM_MODEL:-qwen3-235b-a22b-fp8/latest}
+      - YANDEX_LLM_TEMPERATURE=${YANDEX_LLM_TEMPERATURE:-0.7}
+      - YANDEX_LLM_MAX_TOKENS=${YANDEX_LLM_MAX_TOKENS:-4096}
       - REPORT_DIR=${REPORT_DIR:-/app/reports}
+      - NER_MODEL_NAME=${NER_MODEL_NAME:-urchade/gliner_multi-v2.1}
+      - HF_TOKEN=${HF_TOKEN}
     volumes:
       - uploads:/app/uploads
       - reports:/app/reports
-    command: ["celery", "-A", "src.celery_app", "worker", "-l", "info", "-c", "1"]
+    command: ["/app/.venv/bin/celery", "-A", "src.celery_app", "worker", "-l", "info", "-c", "1"]
 
   api_gateway:
     build:
@@ -114,7 +119,20 @@ services:
     volumes:
       - uploads:/app/uploads
       - reports:/app/reports
-    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["/app/.venv/bin/uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    container_name: frontend
+    ports:
+      - "${FRONTEND_PORT:-4173}:4173"
+    depends_on:
+      api_gateway:
+        condition: service_started
+    networks:
+      - hypothesis_factory
 
 volumes:
   postgres_data:
