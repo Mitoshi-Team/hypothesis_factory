@@ -125,6 +125,8 @@ services:
     build:
       context: .
       dockerfile: services/frontend/Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api/v1}
     container_name: hypothesis_factory_frontend
     ports:
       - "${FRONTEND_PORT:-4173}:4173"
