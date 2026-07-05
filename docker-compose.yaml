@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: postgres
+    container_name: hypothesis_factory_postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-hypothesis-factory}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hypothesis-factory}
@@ -22,7 +22,7 @@ services:
 
   redis:
     image: redis:8.6.2
-    container_name: redis
+    container_name: hypothesis_factory_redis
     command:
       - redis-server
     restart: unless-stopped
@@ -38,7 +38,7 @@ services:
 
   chroma:
     image: chromadb/chroma:1.5.9
-    container_name: chroma
+    container_name: hypothesis_factory_chroma
     volumes:
       - chroma_data:/chroma/chroma
     expose:
@@ -63,7 +63,7 @@ services:
     build:
       context: .
       dockerfile: services/ml_worker/Dockerfile
-    container_name: ml_worker
+    container_name: hypothesis_factory_ml_worker
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,7 +97,7 @@ services:
     build:
       context: .
       dockerfile: services/api_gateway/Dockerfile
-    container_name: api_gateway
+    container_name: hypothesis_factory_api_gateway
     ports:
       - "${API_GATEWAY_PORT:-8000}:8000"
     depends_on:
@@ -125,7 +125,9 @@ services:
     build:
       context: .
       dockerfile: services/frontend/Dockerfile
-    container_name: frontend
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api/v1}
+    container_name: hypothesis_factory_frontend
     ports:
       - "${FRONTEND_PORT:-4173}:4173"
     depends_on:

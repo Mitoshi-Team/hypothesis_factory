@@ -14,6 +14,7 @@ import { useI18n } from '@/lib/i18n'
 import { saveDraft, takeDraft } from '@/lib/draft'
 import {
   createSession,
+  deleteSession,
   fetchResult,
   fetchSessionDetail,
   fetchSessions,
@@ -290,6 +291,21 @@ export function App() {
     navigate('/', { replace: true })
   }, [logout, navigate])
 
+  const handleDeleteSession = useCallback(
+    async (id: string) => {
+      try {
+        await deleteSession(id)
+        setSessions((prev) => prev.filter((s) => s.id !== id))
+        if (activeId === id) {
+          navigate('/', { replace: true })
+        }
+      } catch (e) {
+        setNotice(humanizeError(e))
+      }
+    },
+    [activeId, navigate],
+  )
+
   return (
     <div className="relative h-[100dvh] overflow-hidden">
       {/* Chat shell eases back as the two auth panels slide in from the edges
@@ -315,6 +331,7 @@ export function App() {
               onLogin={openAuth}
               onLogout={handleLogout}
               onRetryHistory={() => setHistoryNonce((n) => n + 1)}
+              onDelete={handleDeleteSession}
             />
           }
           composer={
