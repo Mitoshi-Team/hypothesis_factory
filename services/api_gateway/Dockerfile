@@ -19,6 +19,7 @@ COPY services/api_gateway/pyproject.toml services/api_gateway/
 RUN uv sync --frozen --no-dev --package api-gateway
 
 COPY services/api_gateway/src ./src
+COPY services/api_gateway/scripts ./scripts
 
 RUN mkdir -p /app/uploads /app/reports
 
