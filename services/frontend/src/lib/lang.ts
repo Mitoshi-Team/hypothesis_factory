@@ -67,6 +67,7 @@ const ru: Dict = {
   'sidebar.empty': 'Пока пусто — начните первый чат, и он появится здесь.',
   'sidebar.retry': 'Повторить',
   'sidebar.auth': 'Авторизация',
+  'sidebar.deleteChat': 'Удалить чат',
   'sidebar.hideMenu': 'Скрыть меню',
   'sidebar.showMenu': 'Показать меню',
 
@@ -253,6 +254,7 @@ const en: Dict = {
   'sidebar.empty': "It's empty for now — start your first chat and it will appear here.",
   'sidebar.retry': 'Retry',
   'sidebar.auth': 'Sign in',
+  'sidebar.deleteChat': 'Delete chat',
   'sidebar.hideMenu': 'Hide menu',
   'sidebar.showMenu': 'Show menu',
 
@@ -421,6 +423,7 @@ const zh: Dict = {
   'sidebar.empty': '暂时为空——开始第一个对话，它会显示在这里。',
   'sidebar.retry': '重试',
   'sidebar.auth': '登录',
+  'sidebar.deleteChat': '删除对话',
   'sidebar.hideMenu': '隐藏菜单',
   'sidebar.showMenu': '显示菜单',
 

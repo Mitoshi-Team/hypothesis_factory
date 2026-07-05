@@ -1,4 +1,4 @@
-import { LogIn, Plus, RotateCw } from "lucide-react";
+import { LogIn, Plus, RotateCw, Trash2 } from "lucide-react";
 import type { Session, User } from "@/types";
 import { cn } from "@/lib/cn";
 import { relativeDay } from "@/lib/format";
@@ -18,6 +18,7 @@ interface SidebarProps {
   onLogin: () => void;
   onLogout: () => void;
   onRetryHistory: () => void;
+  onDelete?: (id: string) => void;
 }
 
 export function Sidebar({
@@ -31,6 +32,7 @@ export function Sidebar({
   onLogin,
   onLogout,
   onRetryHistory,
+  onDelete,
 }: SidebarProps) {
   const { t } = useI18n();
   return (
@@ -94,21 +96,43 @@ export function Sidebar({
                     type="button"
                     onClick={() => onSelect(s.id)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+                      "group flex w-full items-center gap-1.5 rounded-lg px-2.5 py-2 text-left transition-colors",
                       isActive ? "bg-accent-50" : "hover:bg-line/60",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "w-full truncate text-[13px] leading-snug",
-                        isActive ? "font-medium text-accent-700" : "text-ink",
-                      )}
-                    >
-                      {s.title}
+                    <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                      <span
+                        className={cn(
+                          "w-full truncate text-[13px] leading-snug",
+                          isActive ? "font-medium text-accent-700" : "text-ink",
+                        )}
+                      >
+                        {s.title}
+                      </span>
+                      <span className="text-[11px] text-ink-faint">
+                        {relativeDay(s.createdAt)}
+                      </span>
                     </span>
-                    <span className="text-[11px] text-ink-faint">
-                      {relativeDay(s.createdAt)}
-                    </span>
+                    {onDelete && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(s.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            onDelete(s.id);
+                          }
+                        }}
+                        className="rounded-md p-1 text-ink-faint opacity-0 transition-opacity hover:bg-red-100 hover:text-red-600 group-hover:opacity-100"
+                        aria-label={t("sidebar.deleteChat")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </button>
                 </li>
               );

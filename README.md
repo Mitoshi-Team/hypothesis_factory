@@ -55,6 +55,12 @@ docker compose exec api_gateway /app/.venv/bin/python /app/scripts/create_admin.
 - API Gateway: `http://localhost:8000`
 - Документация API: `http://localhost:8000/docs`
 
+По умолчанию frontend в Docker обращается к API по относительному пути `/api/v1`, что позволяет использовать один домен с nginx. Для локальной разработки вне Docker можно переопределить адрес:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000/api/v1 npm run dev
+```
+
 ## Локальная разработка
 
 Проект использует `uv` для управления зависимостями. Чтобы установить все
